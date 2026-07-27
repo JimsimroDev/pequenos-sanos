@@ -81,12 +81,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@WebMvcTest` para `AuthController`: registro exitoso → 201, email duplicado → 409, datos inválidos → 400
 - **Refs:** requirements.md REQ-01, design.md §4, design.md §7
 
-### TASK-008: Entidad y repositorio PerfilInfantil
+### TASK-008: Entidad y repositorio PerfilInfantil ✓
 
-- [ ] Crear entidad JPA `PerfilInfantil.java` en `domain/perfil/` con relación `@ManyToOne` a `Usuario`
-- [ ] Implementar `IPerfilInfantilRepository.java`: método `List<PerfilInfantil> findByUsuarioIdAndActivoTrue(Long usuarioId)`
-- [ ] Crear records: `DatosRegistroPerfil` (nombre, edadAnios, avatarCodigo, screenTimeLimit — con `@NotBlank`, `@Min(5)`, `@Max(60)`), `DatosActualizacionPerfil`, `DatosRespuestaPerfil`
-- [ ] Escribir `@DataJpaTest` para `IPerfilInfantilRepository`: listar perfiles de un usuario
+- [x] Crear entidad JPA `PerfilInfantil.java` en `domain/perfil/model/` con relación `@ManyToOne` a `Usuario`
+- [x] Implementar `IPerfilInfantilRepository.java`: método `List<PerfilInfantil> findByUsuarioIdAndActivoTrue(Long usuarioId)`
+- [x] Crear records: `DatosRegistroPerfil` (nombre, edadAnios, avatarCodigo, screenTimeLimit — con `@NotBlank`, `@Min(5)`, `@Max(60)`), `DatosActualizacionPerfil`, `DatosRespuestaPerfil`
+- [x] Escribir `@DataJpaTest` para `IPerfilInfantilRepository`: listar perfiles de un usuario
 - **Refs:** design.md §3, requirements.md REQ-02
 
 ### TASK-009: CRUD de perfiles infantiles
