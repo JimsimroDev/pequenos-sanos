@@ -98,13 +98,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@WebMvcTest` para `PerfilController`: crear, listar, actualizar perfil de otro padre → 403
 - **Refs:** requirements.md REQ-02, REQ-05, design.md §4
 
-### TASK-010: Entidad y repositorio Alimento
+### TASK-010: Entidad y repositorio Alimento ✓
 
-- [ ] Crear enum `CategoriaAlimento.java` en `domain/alimento/`: `FRUTA`, `VERDURA`, `PROTEINA`, `CEREAL`
-- [ ] Crear entidad JPA `Alimento.java` en `domain/alimento/`
-- [ ] Implementar `IAlimentoRepository.java`: métodos `findByActivoTrue()` y `findByCategoriaAndActivoTrue(CategoriaAlimento)`
-- [ ] Crear record `DatosRespuestaAlimento` (id, nombre, categoria, puntosReward)
-- [ ] Escribir `@DataJpaTest` para `IAlimentoRepository`: filtrar por categoría
+- [x] Crear enum `CategoriaAlimento.java` en `domain/alimento/model/`: `FRUTA`, `VERDURA`, `PROTEINA`, `CEREAL`
+- [x] Crear entidad JPA `Alimento.java` en `domain/alimento/model/`
+- [x] Implementar `IAlimentoRepository.java`: métodos `findByActivoTrue()` y `findByCategoriaAndActivoTrue(CategoriaAlimento)`
+- [x] Crear record `DatosRespuestaAlimento` (id, nombre, categoria, puntosReward)
+- [x] Escribir `@DataJpaTest` para `IAlimentoRepository`: filtrar por categoría
 - **Refs:** design.md §3, requirements.md REQ-03
 
 ### TASK-011: Endpoint de catálogo de alimentos ✓

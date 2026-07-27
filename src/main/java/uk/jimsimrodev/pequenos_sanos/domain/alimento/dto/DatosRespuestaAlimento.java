@@ -7,10 +7,10 @@ import uk.jimsimrodev.pequenos_sanos.domain.alimento.model.CategoriaAlimento;
 /**
  * Response DTO for a food item in the nutritional catalogue.
  *
- * @param id           unique identifier
- * @param nombre       food name
- * @param categoria    food category
- * @param descripcion  optional description
+ * @param id          the food item's unique identifier
+ * @param nombre      the food item name
+ * @param categoria   the food category
+ * @param descripcion optional description
  * @param puntosReward reward points granted on consumption
  */
 @Schema(description = "Datos de un alimento del catálogo nutricional")
@@ -25,14 +25,14 @@ public record DatosRespuestaAlimento(
         @Schema(description = "Categoría nutricional", example = "FRUTA")
         CategoriaAlimento categoria,
 
-        @Schema(description = "Descripción", example = "Manzana roja fresca")
+        @Schema(description = "Descripción del alimento", example = "Manzana roja o verde fresca")
         String descripcion,
 
-        @Schema(description = "Puntos de recompensa", example = "10")
+        @Schema(description = "Puntos de recompensa al consumirlo", example = "10")
         Short puntosReward
 ) {
     /**
-     * Factory method to build a DTO from an Alimento entity.
+     * Factory method to build a response DTO from an Alimento entity.
      *
      * @param alimento the entity to map
      * @return a populated DatosRespuestaAlimento record

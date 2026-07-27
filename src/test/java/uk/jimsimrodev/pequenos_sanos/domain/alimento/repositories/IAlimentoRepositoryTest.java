@@ -55,13 +55,14 @@ class IAlimentoRepositoryTest {
 
         // Assert
         assertThat(verduras).hasSize(2);
-        assertThat(verduras).extracting(Alimento::getCategoria).containsOnly(CategoriaAlimento.VERDURA);
+        assertThat(verduras).extracting(Alimento::getCategoria)
+                .containsOnly(CategoriaAlimento.VERDURA);
     }
 
     @Test
     @DisplayName("Should return empty list when no alimentos match category")
     void shouldReturnEmptyListWhenNoAlimentosMatchCategory() {
-        // Arrange
+        // Arrange — no CEREAL items
         em.persistAndFlush(new Alimento("Manzana", CategoriaAlimento.FRUTA, (short) 10));
 
         // Act

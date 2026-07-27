@@ -12,7 +12,7 @@ import java.util.List;
 public interface IAlimentoRepository extends JpaRepository<Alimento, Long> {
 
     /**
-     * Returns all active food items.
+     * Returns all active food items in the catalogue.
      *
      * @return list of active alimentos
      */
