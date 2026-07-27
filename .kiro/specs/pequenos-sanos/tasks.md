@@ -163,11 +163,11 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 
 > Esta fase valida y refuerza el módulo anterior con pruebas adicionales de integridad.
 
-### TASK-016: Tests de integridad transaccional
+### TASK-016: Tests de integridad transaccional ✓
 
-- [ ] Escribir test de integración: registrar mismo consumo dos veces → segundo intento retorna `CONSUMO_DUPLICADO`, BD tiene exactamente 1 registro y 1 transacción de recompensa
-- [ ] Escribir test de integración: simular fallo en `acreditar()` con `@Transactional` rollback → verificar que `RegistroConsumo` tampoco se persiste
-- [ ] Escribir test unitario para `RecompensaService.acreditar()`: registro ya procesado no genera segunda transacción
+- [x] Escribir test de integración: registrar mismo consumo dos veces → segundo intento retorna `CONSUMO_DUPLICADO`, BD tiene exactamente 1 registro y 1 transacción de recompensa
+- [x] Escribir test de integración: simular fallo en `acreditar()` con `@Transactional` rollback → verificar que `RegistroConsumo` tampoco se persiste
+- [x] Escribir test unitario para `RecompensaService.acreditar()`: registro ya procesado no genera segunda transacción
 - **Refs:** requirements.md REQ-08, NFR-02, design.md §6
 
 ---
