@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public interface SesionResource {
             @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
     })
     @GetMapping("/perfil/{perfilId}/hoy")
+    @PreAuthorize("hasAnyRole('PADRE', 'NINO')")
     ResponseEntity<DatosRespuestaSesion> sesionDeHoy(
             @Parameter(in = ParameterIn.PATH, name = "perfilId",
                     description = "ID del perfil infantil", example = "1")
@@ -38,7 +40,7 @@ public interface SesionResource {
 
     @Operation(
             summary = "Iniciar sesión de juego",
-            description = "Inicia una nueva sesión de juego para el perfil. Valida que no se haya agotado el tiempo diario ni exista una sesión activa."
+            description = "Inicia una nueva sesión de juego. Valida que no se haya agotado el tiempo diario ni exista una sesión activa."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Sesión iniciada exitosamente",
@@ -47,6 +49,7 @@ public interface SesionResource {
             @ApiResponse(responseCode = "422", description = "Error de negocio: TIEMPO_AGOTADO o SESION_ACTIVA")
     })
     @PostMapping("/iniciar/{perfilId}")
+    @PreAuthorize("hasAnyRole('PADRE', 'NINO')")
     ResponseEntity<DatosRespuestaSesion> iniciar(
             @Parameter(in = ParameterIn.PATH, name = "perfilId",
                     description = "ID del perfil infantil", example = "1")

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +32,7 @@ public interface RecompensaResource {
                         @ApiResponse(responseCode = "403", description = "El perfil no pertenece al padre autenticado")
         })
         @GetMapping("/perfil/{perfilId}")
+        @PreAuthorize("hasAnyRole('PADRE', 'NINO')")
         ResponseEntity<List<DatosRespuestaRecompensa>> historial(
                         @Parameter(in = ParameterIn.PATH, name = "perfilId", example = "1") @PathVariable Long perfilId,
                         @AuthenticationPrincipal Usuario usuario);
@@ -42,6 +44,7 @@ public interface RecompensaResource {
                         @ApiResponse(responseCode = "403", description = "El perfil no pertenece al padre autenticado")
         })
         @GetMapping("/perfil/{perfilId}/saldo")
+        @PreAuthorize("hasAnyRole('PADRE', 'NINO')")
         ResponseEntity<DatosSaldoRecompensa> saldo(
                         @Parameter(in = ParameterIn.PATH, name = "perfilId", example = "1") @PathVariable Long perfilId,
                         @AuthenticationPrincipal Usuario usuario);

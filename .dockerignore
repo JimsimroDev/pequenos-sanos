@@ -1,0 +1,23 @@
+# Build artifacts
+target/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.kiro/
+
+# Git
+.git/
+.gitignore
+
+# Environment secrets — never bake into image
+.env
+
+# Docs
+docs/
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
