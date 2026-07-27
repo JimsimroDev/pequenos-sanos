@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.domain.usuario;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.repositories;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Rol;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 
 import java.util.Optional;
 

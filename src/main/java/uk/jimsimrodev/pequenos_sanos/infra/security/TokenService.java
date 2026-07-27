@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.Usuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;

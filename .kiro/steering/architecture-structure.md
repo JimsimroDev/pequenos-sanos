@@ -3,58 +3,142 @@ name: architecture-structure
 inclusion: always
 ---
 
-# Workspace Project Structure & Standards
+# Package by Domain Architecture Standard
 
-## Project Architecture
+## Rule
 
-All new code must strictly follow the feature-based package structure under `uk.jimsimrodev.pequenos_sanos`. The project separates HTTP routing, core domain modules, and infrastructure concerns.
+All new code must follow the **Package by Domain** structure under `uk.jimsimrodev.pequenos_sanos`. Each business domain encapsulates its own technical sub-layers.
 
-### Required Package Structure
+## Required Package Structure
 
 ```
 uk/jimsimrodev/pequenos_sanos/
-├── config/          # Global configuration classes (e.g., CORS, Swagger, Security)
-├── controller/      # REST Controllers (e.g., ConsumoController.java)
-├── domain/          # Core business logic organized by feature/entity
-│   └── [entity]/    # e.g., usuario, perfil, alimento, consumo, recompensa, sesion
-│       ├── [Entity].java              # JPA Entity
-│       ├── Datos[Name].java           # Request/Response DTO records
-│       └── I[Entity]Repository.java   # Spring Data JPA Repository
-├── infra/
-│   ├── errores/     # Global error handlers (TratadorDeErrores.java)
-│   └── security/    # Security, JWT filters, authentication logic
-├── service/         # Business services (ConsumoService.java, etc.)
-└── websocket/       # WebSocket handlers and in-memory game state
+│
+├── domain/
+│   ├── auth/
+│   │   ├── controllers/
+│   │   │   ├── resource/
+│   │   │   │   └── AuthResource.java        ← OpenAPI interface
+│   │   │   └── AuthController.java           ← @RestController (thin)
+│   │   ├── services/
+│   │   │   ├── impl/
+│   │   │   │   └── AuthServiceImpl.java
+│   │   │   └── IAuthService.java
+│   │   ├── repositories/
+│   │   │   └── IUsuarioRepository.java
+│   │   ├── dto/
+│   │   │   ├── DatosRegistroUsuario.java
+│   │   │   ├── DatosLoginUsuario.java
+│   │   │   ├── DatosRespuestaUsuario.java
+│   │   │   └── DatosJWTToken.java
+│   │   └── model/
+│   │       ├── Usuario.java                  ← @Entity
+│   │       └── Rol.java                      ← Enum
+│   │
+│   ├── perfil/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       └── PerfilInfantil.java
+│   │
+│   ├── alimento/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       ├── Alimento.java
+│   │       └── CategoriaAlimento.java
+│   │
+│   ├── consumo/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │
+│   ├── recompensa/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │
+│   └── sesion/
+│       ├── controllers/resource/
+│       ├── services/impl/
+│       ├── repositories/
+│       ├── dto/
+│       ├── websocket/
+│       │   ├── GameSessionHandler.java
+│       │   └── GameStateStore.java
+│       └── model/
+│
+├── config/                          ← Global configurations only
+│   ├── SecurityConfig.java
+│   ├── SwaggerConfig.java
+│   └── WebSocketConfig.java
+│
+└── infra/                           ← Cross-cutting infrastructure
+    ├── Result.java                  ← Result<T> sealed interface
+    ├── errores/
+    │   ├── TratadorDeErrores.java
+    │   └── CodigosError.java
+    └── security/
+        ├── TokenService.java
+        ├── SecurityFilter.java
+        └── AutenticacionService.java
 ```
 
-### Layering & Naming Rules
+## Sub-Layer Rules
 
-1. **`domain/[entity]/` Module:**
-   - Group the JPA Entity, its DTOs, and the Repository in one folder named after the entity (lowercase).
-   - **DTOs:** Java `record` types prefixed with `Datos` (e.g., `DatosRegistroConsumo`, `DatosRespuestaPerfil`).
-   - **Repositories:** Interface prefixed with `I`, suffixed with `Repository` (e.g., `IConsumoRepository`).
+### `controllers/`
 
-2. **`controller/` Layer:**
-   - Thin controllers — HTTP concerns only (status codes, request/response mapping).
-   - Never expose raw JPA entities in responses.
+- Contains `@RestController` thin controllers.
+- Has `resource/` sub-package with the OpenAPI interface (`XxxResource.java`).
+- Controllers implement the `XxxResource` interface.
+- Zero business logic — delegates all to the service layer.
 
-3. **`infra/` Layer:**
-   - `errores/`: `@RestControllerAdvice` global handler.
-   - `security/`: JWT filter, `TokenService`, `SecurityConfig`.
+### `services/`
 
-4. **`service/` Layer:**
-   - Business rules and orchestration.
-   - Returns `Result<T>` for controlled business failures.
+- Interface named `I<Domain>Service.java`.
+- Implementation in `impl/<Domain>ServiceImpl.java`.
+- Returns `Result<T>` for business errors.
+- `@Transactional` on write operations, `@Transactional(readOnly = true)` on reads.
 
-5. **`config/` Layer:**
-   - `SwaggerConfig`, `SecurityConfig`, `WebSocketConfig`, `CorsConfig`.
+### `repositories/`
 
-## Configuration & Environment
+- Spring Data JPA interfaces named `I<Entity>Repository.java`.
 
-- Externalize configuration using `application.yml` in `src/main/resources`.
-- Never commit secrets, passwords, or JWT secret keys.
+### `dto/`
 
-## Commit Hygiene
+- Java `record` types for request/response data.
+- Named `Datos<Purpose><Domain>` (e.g., `DatosRegistroUsuario`, `DatosRespuestaPerfil`).
+- Request DTOs: Jakarta Validation annotations + `@Schema`.
+- Response DTOs: `@Schema` annotations only.
 
-- Keep changes focused per commit.
-- Maintain clear and updated documentation when altering public APIs.
+### `model/`
+
+- JPA `@Entity` classes and domain enums.
+- Named after the domain concept (e.g., `Usuario`, `PerfilInfantil`).
+
+## Configuration & Infrastructure
+
+- `config/` — global Spring beans (Security, Swagger, WebSocket, CORS).
+- `infra/` — cross-cutting concerns: error handling, JWT, `Result<T>`.
+- `DocumentationController` lives in `config/` as it is a global redirect.
+
+## Naming Conventions
+
+| Artifact           | Convention               | Example                     |
+| ------------------ | ------------------------ | --------------------------- |
+| Entity             | `PascalCase`             | `Usuario`, `PerfilInfantil` |
+| Repository         | `I<Entity>Repository`    | `IUsuarioRepository`        |
+| Service interface  | `I<Domain>Service`       | `IAuthService`              |
+| Service impl       | `<Domain>ServiceImpl`    | `AuthServiceImpl`           |
+| Controller         | `<Domain>Controller`     | `AuthController`            |
+| Resource interface | `<Domain>Resource`       | `AuthResource`              |
+| DTO                | `Datos<Purpose><Domain>` | `DatosRegistroUsuario`      |
+| Enum               | `PascalCase`             | `Rol`, `CategoriaAlimento`  |

@@ -3,8 +3,8 @@ package uk.jimsimrodev.pequenos_sanos.infra.security;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.Rol;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.Usuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Rol;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,7 +66,7 @@ class TokenServiceTest {
     @Test
     @DisplayName("Should return null when token is expired")
     void shouldReturnNullWhenTokenIsExpired() {
-        // Arrange - create a service with 0ms expiration (already expired)
+        // Arrange — create a service with 0ms expiration (already expired)
         var expiredTokenService = new TokenService(SECRET, 0L);
         var usuario = new Usuario("Maria Test", "maria@example.com", "hashedpassword", Rol.NINO);
         String token = expiredTokenService.generarToken(usuario);

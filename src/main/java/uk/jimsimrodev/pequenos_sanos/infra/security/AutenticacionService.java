@@ -4,7 +4,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.IUsuarioRepository;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.repositories.IUsuarioRepository;
 
 /**
  * Spring Security {@link UserDetailsService} implementation that loads users
