@@ -50,11 +50,11 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Verificar que errores de validación de DTO retornan 400 con lista de campos inválidos
 - **Refs:** design.md §9 (Error Handling), steering: service-error-handling.md
 
-### TASK-005: Configurar Swagger/OpenAPI
+### TASK-005: Configurar Swagger/OpenAPI ✓
 
-- [ ] Crear `SwaggerConfig.java` en `config/` con info del proyecto (título, versión, descripción)
-- [ ] Configurar esquema de seguridad Bearer JWT en la UI de Swagger
-- [ ] Verificar que `http://localhost:8080/swagger-ui.html` carga correctamente
+- [x] Crear `SwaggerConfig.java` en `config/` con info del proyecto (título, versión, descripción)
+- [x] Configurar esquema de seguridad Bearer JWT en la UI de Swagger
+- [x] Verificar que `http://localhost:8080/swagger-ui.html` carga correctamente
 - **Refs:** design.md §4 (REST API Design)
 
 ---
