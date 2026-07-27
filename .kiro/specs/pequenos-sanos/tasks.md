@@ -89,13 +89,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@DataJpaTest` para `IPerfilInfantilRepository`: listar perfiles de un usuario
 - **Refs:** design.md §3, requirements.md REQ-02
 
-### TASK-009: CRUD de perfiles infantiles
+### TASK-009: CRUD de perfiles infantiles ✓
 
-- [ ] Crear `PerfilService.java` en `service/` con métodos: `crear`, `listar`, `actualizar`, `desactivar`
-- [ ] En `crear` y `actualizar`: validar que `screenTimeLimit` esté entre 5 y 60 — retornar `Result.Error(LIMITE_INVALIDO)` si no
-- [ ] En `actualizar` y `desactivar`: validar que el perfil pertenece al padre autenticado — retornar 403 si no
-- [ ] Crear `PerfilController.java` en `controller/`: `POST /api/v1/perfiles` → 201, `GET /api/v1/perfiles` → 200, `PUT /api/v1/perfiles/{id}` → 200, `DELETE /api/v1/perfiles/{id}` → 204
-- [ ] Escribir `@WebMvcTest` para `PerfilController`: crear, listar, actualizar perfil de otro padre → 403
+- [x] Crear `PerfilService.java` en `service/` con métodos: `crear`, `listar`, `actualizar`, `desactivar`
+- [x] En `crear` y `actualizar`: validar que `screenTimeLimit` esté entre 5 y 60 — retornar `Result.Error(LIMITE_INVALIDO)` si no
+- [x] En `actualizar` y `desactivar`: validar que el perfil pertenece al padre autenticado — retornar 403 si no
+- [x] Crear `PerfilController.java` en `controller/`: `POST /api/v1/perfiles` → 201, `GET /api/v1/perfiles` → 200, `PUT /api/v1/perfiles/{id}` → 200, `DELETE /api/v1/perfiles/{id}` → 204
+- [x] Escribir `@WebMvcTest` para `PerfilController`: crear, listar, actualizar perfil de otro padre → 403
 - **Refs:** requirements.md REQ-02, REQ-05, design.md §4
 
 ### TASK-010: Entidad y repositorio Alimento
