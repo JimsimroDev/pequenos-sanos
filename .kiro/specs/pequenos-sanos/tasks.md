@@ -176,13 +176,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 
 > Cubre: REQ-10 a REQ-13 · CU-10, CU-11, CU-12, CU-13
 
-### TASK-017: Entidad y repositorio SesionJuego
+### TASK-017: Entidad y repositorio SesionJuego ✓
 
-- [ ] Crear entidad JPA `SesionJuego.java` en `domain/sesion/` con relación a `PerfilInfantil`
-- [ ] Implementar `ISesionJuegoRepository.java`: métodos `findByPerfilIdAndFechaSesion(Long, LocalDate)`, `findByPerfilIdAndFechaSesionAndFinIsNull(Long, LocalDate)`
-- [ ] Crear record `DatosRespuestaSesion` (id, perfilId, minutosJugados, limitMinutos, minutosRestantes, estado)
-- [ ] Agregar endpoint `GET /api/v1/sesiones/perfil/{id}/hoy` en un `SesionController.java`
-- [ ] Escribir `@DataJpaTest`: constraint UNIQUE(perfil_id, fecha_sesion)
+- [x] Crear entidad JPA `SesionJuego.java` en `domain/sesion/model/` con relación a `PerfilInfantil`
+- [x] Implementar `ISesionJuegoRepository.java`: métodos `findByPerfilIdAndFechaSesion(Long, LocalDate)`, `findByPerfilIdAndFechaSesionAndFinIsNull(Long, LocalDate)`
+- [x] Crear record `DatosRespuestaSesion` (id, perfilId, minutosJugados, limitMinutos, minutosRestantes, estado)
+- [x] Agregar endpoint `GET /api/v1/sesiones/perfil/{id}/hoy` en un `SesionController.java`
+- [x] Escribir `@DataJpaTest`: constraint UNIQUE(perfil_id, fecha_sesion)
 - **Refs:** design.md §3, requirements.md REQ-10, REQ-13
 
 ### TASK-018: Configurar WebSocket con STOMP
