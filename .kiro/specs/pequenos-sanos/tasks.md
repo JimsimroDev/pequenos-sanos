@@ -131,21 +131,21 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@DataJpaTest`: verificar constraint UNIQUE en registro_consumo_id
 - **Refs:** design.md §3, requirements.md REQ-07, REQ-08
 
-### TASK-014: Motor transaccional — registrar consumo y acreditar recompensa
+### TASK-014: Motor transaccional — registrar consumo y acreditar recompensa ✓
 
-- [ ] Crear `RecompensaService.java` en `service/`: método `@Transactional acreditar(Long registroConsumoId) → Result<DatosRespuestaRecompensa>`
+- [x] Crear `RecompensaService.java` en `service/`: método `@Transactional acreditar(Long registroConsumoId) → Result<DatosRespuestaRecompensa>`
   - Cargar `RegistroConsumo`, verificar no procesado
   - Crear `TransaccionRecompensa`
   - Actualizar `monedas_saldo` en `PerfilInfantil` (nunca negativo)
   - Marcar `RegistroConsumo.procesado = true`
-- [ ] Crear `ConsumoService.java` en `service/`: método `@Transactional registrar(DatosRegistroConsumo, Long usuarioId) → Result<DatosRespuestaConsumo>`
+- [x] Crear `ConsumoService.java` en `service/`: método `@Transactional registrar(DatosRegistroConsumo, Long usuarioId) → Result<DatosRespuestaConsumo>`
   - Validar alimento existe → `ALIMENTO_NO_ENCONTRADO`
   - Validar perfil pertenece al padre → `PERFIL_NO_ENCONTRADO`
   - Verificar no duplicado del día → `CONSUMO_DUPLICADO`
   - Persistir `RegistroConsumo`
   - Llamar `RecompensaService.acreditar()` dentro del mismo TX
-- [ ] Crear `ConsumoController.java` en `controller/`: `POST /api/v1/consumos` → 201, `GET /api/v1/consumos/perfil/{id}` → 200
-- [ ] Escribir test unitario para `ConsumoService`: flujo exitoso, duplicado → `CONSUMO_DUPLICADO`, alimento inexistente → `ALIMENTO_NO_ENCONTRADO`
+- [x] Crear `ConsumoController.java` en `controller/`: `POST /api/v1/consumos` → 201, `GET /api/v1/consumos/perfil/{id}` → 200
+- [x] Escribir test unitario para `ConsumoService`: flujo exitoso, duplicado → `CONSUMO_DUPLICADO`, alimento inexistente → `ALIMENTO_NO_ENCONTRADO`
 - [ ] Escribir `@SpringBootTest` de integración: POST /consumos → verifica recompensa acreditada en BD y saldo actualizado
 - **Refs:** requirements.md REQ-04, REQ-07, REQ-08, REQ-09, design.md §6
 
