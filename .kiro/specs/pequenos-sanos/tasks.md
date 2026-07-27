@@ -63,13 +63,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 
 > Cubre: REQ-01 a REQ-06 · CU-01, CU-02, CU-03, CU-04, CU-05, CU-06
 
-### TASK-006: Entidad y repositorio Usuario
+### TASK-006: Entidad y repositorio Usuario ✓
 
-- [ ] Crear entidad JPA `Usuario.java` en `domain/usuario/` con todos los campos del diseño
-- [ ] Implementar `IUsuarioRepository.java` extendiendo `JpaRepository<Usuario, Long>`
-- [ ] Agregar método `Optional<Usuario> findByEmail(String email)`
-- [ ] Crear records: `DatosRegistroUsuario` (nombre, email, password — con validaciones `@NotBlank`, `@Email`, `@Size`), `DatosLoginUsuario` (email, password), `DatosRespuestaUsuario` (id, nombre, email)
-- [ ] Escribir `@DataJpaTest` para `IUsuarioRepository`: buscar por email existente y no existente
+- [x] Crear entidad JPA `Usuario.java` en `domain/usuario/` con todos los campos del diseño
+- [x] Implementar `IUsuarioRepository.java` extendiendo `JpaRepository<Usuario, Long>`
+- [x] Agregar método `Optional<Usuario> findByEmail(String email)`
+- [x] Crear records: `DatosRegistroUsuario` (nombre, email, password — con validaciones `@NotBlank`, `@Email`, `@Size`), `DatosLoginUsuario` (email, password), `DatosRespuestaUsuario` (id, nombre, email)
+- [x] Escribir `@DataJpaTest` para `IUsuarioRepository`: buscar por email existente y no existente
 - **Refs:** design.md §3, design.md §2
 
 ### TASK-007: Autenticación — registro y login
