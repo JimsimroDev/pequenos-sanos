@@ -4,8 +4,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/pequenos_sanos_db
-    username: ${DB_USERNAME:jimsimro}
-    password: ${DB_PASSWORD:1234}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
