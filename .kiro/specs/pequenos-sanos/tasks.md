@@ -19,26 +19,26 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Verificar que la aplicación inicia sin errores
 - **Refs:** design.md §2 (Package Structure), design.md §1 (Tech Stack)
 
-### TASK-002: Configurar base de datos y migraciones Flyway
+### TASK-002: Configurar base de datos y migraciones Flyway ✓
 
-- [ ] Crear base de datos PostgreSQL `pequenos_sanos_db`
-- [ ] Crear migración `V1__create_usuarios.sql`: tabla `usuarios`
-- [ ] Crear migración `V2__create_perfiles_infantiles.sql`: tabla `perfiles_infantiles`
-- [ ] Crear migración `V3__create_alimentos.sql`: tabla `alimentos` + datos semilla (10 alimentos mínimo: frutas, verduras, proteínas)
-- [ ] Crear migración `V4__create_registros_consumo.sql`: tabla `registros_consumo` con constraint UNIQUE(perfil_id, alimento_id, fecha_consumo)
-- [ ] Crear migración `V5__create_transacciones_recompensa.sql`: tabla `transacciones_recompensa` con UNIQUE(registro_consumo_id)
-- [ ] Crear migración `V6__create_sesiones_juego.sql`: tabla `sesiones_juego` con UNIQUE(perfil_id, fecha_sesion)
-- [ ] Verificar que Flyway aplica todas las migraciones sin errores al arrancar
+- [x] Crear base de datos PostgreSQL `pequenos_sanos_db`
+- [x] Crear migración `V1__create_usuarios.sql`: tabla `usuarios`
+- [x] Crear migración `V2__create_perfiles_infantiles.sql`: tabla `perfiles_infantiles`
+- [x] Crear migración `V3__create_alimentos.sql`: tabla `alimentos` + datos semilla (10 alimentos mínimo: frutas, verduras, proteínas)
+- [x] Crear migración `V4__create_registros_consumo.sql`: tabla `registros_consumo` con constraint UNIQUE(perfil_id, alimento_id, fecha_consumo)
+- [x] Crear migración `V5__create_transacciones_recompensa.sql`: tabla `transacciones_recompensa` con UNIQUE(registro_consumo_id)
+- [x] Crear migración `V6__create_sesiones_juego.sql`: tabla `sesiones_juego` con UNIQUE(perfil_id, fecha_sesion)
+- [x] Verificar que Flyway aplica todas las migraciones sin errores al arrancar
 - **Refs:** design.md §3 (Data Model), requirements.md REQ-08 (prevención duplicados)
 
-### TASK-003: Implementar infraestructura de seguridad JWT
+### TASK-003: Implementar infraestructura de seguridad JWT ✓
 
-- [ ] Crear `TokenService.java` en `infra/security/`: métodos `generarToken(Usuario)` y `getSubject(String token)`
-- [ ] Crear `DatosJWTToken.java` record en `domain/usuario/`
-- [ ] Crear `SecurityFilter.java` que intercepta requests, valida Bearer token y carga el `SecurityContext`
-- [ ] Crear `SecurityConfig.java` en `config/`: configurar `SecurityFilterChain`, deshabilitar CSRF, stateless session, rutas públicas (`/auth/**`, `/api-docs/**`)
-- [ ] Crear `AutenticacionService.java` en `infra/security/` implementando `UserDetailsService`
-- [ ] Escribir test unitario para `TokenService`: genera token, extrae subject correctamente
+- [x] Crear `TokenService.java` en `infra/security/`: métodos `generarToken(Usuario)` y `getSubject(String token)`
+- [x] Crear `DatosJWTToken.java` record en `domain/usuario/`
+- [x] Crear `SecurityFilter.java` que intercepta requests, valida Bearer token y carga el `SecurityContext`
+- [x] Crear `SecurityConfig.java` en `config/`: configurar `SecurityFilterChain`, deshabilitar CSRF, stateless session, rutas públicas (`/auth/**`, `/api-docs/**`)
+- [x] Crear `AutenticacionService.java` en `infra/security/` implementando `UserDetailsService`
+- [x] Escribir test unitario para `TokenService`: genera token, extrae subject correctamente
 - **Refs:** design.md §7 (Security Design), requirements.md REQ-01
 
 ### TASK-004: Implementar manejo global de errores
