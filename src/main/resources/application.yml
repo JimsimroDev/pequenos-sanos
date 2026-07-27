@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: pequenos-sanos
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pequenos_sanos_db
+    username: ${DB_USERNAME:jimsimro}
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+
+api:
+  security:
+    token:
+      secret: ${JWT_SECRET}
+      expiration: 7200000
