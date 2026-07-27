@@ -107,12 +107,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Escribir `@DataJpaTest` para `IAlimentoRepository`: filtrar por categoría
 - **Refs:** design.md §3, requirements.md REQ-03
 
-### TASK-011: Endpoint de catálogo de alimentos
+### TASK-011: Endpoint de catálogo de alimentos ✓
 
-- [ ] Crear `AlimentoController.java` en `controller/`: `GET /api/v1/alimentos` (param opcional `categoria`), `GET /api/v1/alimentos/{id}`
-- [ ] Retornar 200 con lista o detalle, 404 si alimento no existe
-- [ ] Todos los endpoints requieren autenticación JWT
-- [ ] Escribir `@WebMvcTest` para `AlimentoController`: listar todos, filtrar por categoría, id inexistente → 404
+- [x] Crear `AlimentoController.java` en `controller/`: `GET /api/v1/alimentos` (param opcional `categoria`), `GET /api/v1/alimentos/{id}`
+- [x] Retornar 200 con lista o detalle, 404 si alimento no existe
+- [x] Todos los endpoints requieren autenticación JWT
+- [x] Escribir `@WebMvcTest` para `AlimentoController`: listar todos, filtrar por categoría, id inexistente → 404
 - **Refs:** requirements.md REQ-03, design.md §4
 
 ### TASK-012: Entidad y repositorio RegistroConsumo
