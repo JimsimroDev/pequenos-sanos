@@ -237,11 +237,11 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 
 ## Fase 4 — Calidad y Cierre
 
-### TASK-022: Tests de integración end-to-end
+### TASK-022: Tests de integración end-to-end ✓
 
-- [ ] `@SpringBootTest` flujo completo Módulo 1: registro padre → crear perfil → registrar consumo → verificar saldo de monedas incrementado
-- [ ] `@SpringBootTest` flujo completo Módulo 2: segundo registro del mismo alimento en el mismo día → 422 con código `CONSUMO_DUPLICADO`, saldo sin cambios
-- [ ] `@SpringBootTest` flujo Módulo 3: iniciar sesión → tiempo agotado → intento de reconexión → `TIEMPO_AGOTADO`
+- [x] `@SpringBootTest` flujo completo Módulo 1: registro padre → crear perfil → registrar consumo → verificar saldo de monedas incrementado
+- [x] `@SpringBootTest` flujo completo Módulo 2: segundo registro del mismo alimento en el mismo día → 422 con código `CONSUMO_DUPLICADO`, saldo sin cambios
+- [x] `@SpringBootTest` flujo Módulo 3: iniciar sesión → tiempo agotado → intento de reconexión → `TIEMPO_AGOTADO`
 - **Refs:** requirements.md todos los REQs, design.md §10
 
 ### TASK-023: Seguridad — pruebas de autorización
