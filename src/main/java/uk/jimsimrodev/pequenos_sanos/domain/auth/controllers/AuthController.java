@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.controller;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.controllers;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -6,13 +6,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import uk.jimsimrodev.pequenos_sanos.controller.resource.AuthResource;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.controllers.resource.AuthResource;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosJWTToken;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosLoginUsuario;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRegistroUsuario;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRespuestaUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.services.IAuthService;
 import uk.jimsimrodev.pequenos_sanos.infra.Result;
-import uk.jimsimrodev.pequenos_sanos.service.IAuthService;
 
 /**
  * Thin REST controller for authentication endpoints.
