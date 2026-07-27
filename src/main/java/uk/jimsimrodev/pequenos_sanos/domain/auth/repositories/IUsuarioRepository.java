@@ -1,6 +1,7 @@
-package uk.jimsimrodev.pequenos_sanos.domain.usuario;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 
 import java.util.Optional;
 

@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.domain.usuario;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -71,8 +71,6 @@ public class Usuario implements UserDetails {
         this.createdAt = LocalDateTime.now();
     }
 
-    // --- UserDetails implementation ---
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + rol.name()));
@@ -108,41 +106,14 @@ public class Usuario implements UserDetails {
         return this.activo;
     }
 
-    // --- Getters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public Rol getRol() {
-        return rol;
-    }
-
-    public Boolean getActivo() {
-        return activo;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    // --- Setters for mutable fields ---
+    public Long getId() { return id; }
+    public String getNombre() { return nombre; }
+    public String getEmail() { return email; }
+    public String getPasswordHash() { return passwordHash; }
+    public Rol getRol() { return rol; }
+    public Boolean getActivo() { return activo; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     public void setNombre(String nombre) {
         this.nombre = nombre;

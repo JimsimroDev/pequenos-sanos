@@ -42,68 +42,90 @@ El sistema se compone de dos motores independientes que colaboran:
 
 ## 2. Package Structure
 
-Siguiendo los estándares del proyecto (`architecture-structure.md`):
+Siguiendo el estándar **Package by Domain** del proyecto (`architecture-structure.md`):
 
 ```
 uk/jimsimrodev/pequenos_sanos/
+│
+├── domain/
+│   ├── auth/
+│   │   ├── controllers/
+│   │   │   ├── resource/
+│   │   │   │   └── AuthResource.java
+│   │   │   └── AuthController.java
+│   │   ├── services/
+│   │   │   ├── impl/
+│   │   │   │   └── AuthServiceImpl.java
+│   │   │   └── IAuthService.java
+│   │   ├── repositories/
+│   │   │   └── IUsuarioRepository.java
+│   │   ├── dto/
+│   │   │   ├── DatosRegistroUsuario.java
+│   │   │   ├── DatosLoginUsuario.java
+│   │   │   ├── DatosRespuestaUsuario.java
+│   │   │   └── DatosJWTToken.java
+│   │   └── model/
+│   │       ├── Usuario.java
+│   │       └── Rol.java
+│   │
+│   ├── perfil/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       └── PerfilInfantil.java
+│   │
+│   ├── alimento/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       ├── Alimento.java
+│   │       └── CategoriaAlimento.java
+│   │
+│   ├── consumo/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       └── RegistroConsumo.java
+│   │
+│   ├── recompensa/
+│   │   ├── controllers/resource/
+│   │   ├── services/impl/
+│   │   ├── repositories/
+│   │   ├── dto/
+│   │   └── model/
+│   │       └── TransaccionRecompensa.java
+│   │
+│   └── sesion/
+│       ├── controllers/resource/
+│       ├── services/impl/
+│       ├── repositories/
+│       ├── dto/
+│       ├── websocket/
+│       │   ├── GameSessionHandler.java
+│       │   └── GameStateStore.java
+│       └── model/
+│           └── SesionJuego.java
+│
 ├── config/
 │   ├── SecurityConfig.java
 │   ├── SwaggerConfig.java
 │   └── WebSocketConfig.java
-├── controller/
-│   ├── AuthController.java
-│   ├── PerfilController.java
-│   ├── AlimentoController.java
-│   ├── ConsumoController.java
-│   └── ReporteController.java
-├── domain/
-│   ├── usuario/
-│   │   ├── Usuario.java
-│   │   ├── Rol.java
-│   │   ├── IUsuarioRepository.java
-│   │   ├── DatosRegistroUsuario.java
-│   │   └── DatosLoginUsuario.java
-│   ├── perfil/
-│   │   ├── PerfilInfantil.java
-│   │   ├── IPerfilInfantilRepository.java
-│   │   ├── DatosRegistroPerfil.java
-│   │   ├── DatosActualizacionPerfil.java
-│   │   └── DatosRespuestaPerfil.java
-│   ├── alimento/
-│   │   ├── Alimento.java
-│   │   ├── CategoriaAlimento.java
-│   │   ├── IAlimentoRepository.java
-│   │   └── DatosRespuestaAlimento.java
-│   ├── consumo/
-│   │   ├── RegistroConsumo.java
-│   │   ├── IRegistroConsumoRepository.java
-│   │   ├── DatosRegistroConsumo.java
-│   │   └── DatosRespuestaConsumo.java
-│   ├── recompensa/
-│   │   ├── TransaccionRecompensa.java
-│   │   ├── ITransaccionRecompensaRepository.java
-│   │   └── DatosRespuestaRecompensa.java
-│   └── sesion/
-│       ├── SesionJuego.java
-│       ├── ISesionJuegoRepository.java
-│       └── DatosRespuestaSesion.java
-├── infra/
-│   ├── errores/
-│   │   └── TratadorDeErrores.java
-│   └── security/
-│       ├── AutenticacionService.java
-│       ├── TokenService.java
-│       ├── SecurityFilter.java
-│       └── DatosJWTToken.java
-├── service/
-│   ├── ConsumoService.java
-│   ├── RecompensaService.java
-│   ├── PerfilService.java
-│   └── SesionService.java
-└── websocket/
-    ├── GameSessionHandler.java
-    ├── SessionTimerService.java
-    └── GameStateStore.java
+│
+└── infra/
+    ├── Result.java
+    ├── errores/
+    │   ├── TratadorDeErrores.java
+    │   └── CodigosError.java
+    └── security/
+        ├── AutenticacionService.java
+        ├── TokenService.java
+        └── SecurityFilter.java
 ```
 
 ---

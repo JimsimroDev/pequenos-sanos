@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.domain.usuario;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.model;
 
 /**
  * Enum representing the user roles in the system.

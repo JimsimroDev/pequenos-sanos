@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.domain.usuario;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.dto;
 
 /**
  * Response DTO containing the JWT access token issued after successful authentication.
