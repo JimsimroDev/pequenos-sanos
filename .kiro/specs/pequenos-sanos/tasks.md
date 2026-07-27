@@ -149,12 +149,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Escribir `@SpringBootTest` de integración: POST /consumos → verifica recompensa acreditada en BD y saldo actualizado
 - **Refs:** requirements.md REQ-04, REQ-07, REQ-08, REQ-09, design.md §6
 
-### TASK-015: Endpoints de recompensas y reportes
+### TASK-015: Endpoints de recompensas y reportes ✓
 
-- [ ] Crear endpoints en un `RecompensaController.java` en `controller/`: `GET /api/v1/recompensas/perfil/{id}` → historial, `GET /api/v1/recompensas/perfil/{id}/saldo` → saldo actual
-- [ ] Crear `ReporteController.java` en `controller/`: `GET /api/v1/reportes/perfil/{id}/resumen` → consumos del día + tiempo jugado + monedas ganadas
-- [ ] Validar en cada endpoint que el perfil pertenece al padre autenticado
-- [ ] Escribir `@WebMvcTest` para `RecompensaController`: saldo de perfil ajeno → 403
+- [x] Crear endpoints en un `RecompensaController.java` en `controller/`: `GET /api/v1/recompensas/perfil/{id}` → historial, `GET /api/v1/recompensas/perfil/{id}/saldo` → saldo actual
+- [x] Crear `ReporteController.java` en `controller/`: `GET /api/v1/reportes/perfil/{id}/resumen` → consumos del día + tiempo jugado + monedas ganadas
+- [x] Validar en cada endpoint que el perfil pertenece al padre autenticado
+- [x] Escribir `@WebMvcTest` para `RecompensaController`: saldo de perfil ajeno → 403
 - **Refs:** requirements.md REQ-06, REQ-09, design.md §4
 
 ---
