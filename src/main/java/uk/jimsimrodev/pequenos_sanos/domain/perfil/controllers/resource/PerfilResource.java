@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,7 @@ public interface PerfilResource {
                         @ApiResponse(responseCode = "422", description = "Error de negocio: límite de tiempo inválido")
         })
         @PostMapping
+        @PreAuthorize("hasRole('PADRE')")
         ResponseEntity<DatosRespuestaPerfil> crear(
                         @RequestBody @Valid DatosRegistroPerfil datos,
                         @AuthenticationPrincipal Usuario usuario);
@@ -48,6 +50,7 @@ public interface PerfilResource {
                         @ApiResponse(responseCode = "401", description = "Token ausente o inválido")
         })
         @GetMapping
+        @PreAuthorize("hasRole('PADRE')")
         ResponseEntity<List<DatosRespuestaPerfil>> listar(
                         @AuthenticationPrincipal Usuario usuario);
 
@@ -60,6 +63,7 @@ public interface PerfilResource {
                         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
         })
         @PutMapping("/{id}")
+        @PreAuthorize("hasRole('PADRE')")
         ResponseEntity<DatosRespuestaPerfil> actualizar(
                         @Parameter(in = ParameterIn.PATH, name = "id", description = "ID del perfil", example = "1") @PathVariable Long id,
                         @RequestBody @Valid DatosActualizacionPerfil datos,
@@ -73,6 +77,7 @@ public interface PerfilResource {
                         @ApiResponse(responseCode = "404", description = "Perfil no encontrado")
         })
         @DeleteMapping("/{id}")
+        @PreAuthorize("hasRole('PADRE')")
         ResponseEntity<Void> desactivar(
                         @Parameter(in = ParameterIn.PATH, name = "id", description = "ID del perfil", example = "1") @PathVariable Long id,
                         @AuthenticationPrincipal Usuario usuario);
