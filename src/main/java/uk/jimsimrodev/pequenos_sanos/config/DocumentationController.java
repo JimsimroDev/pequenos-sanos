@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.controller;
+package uk.jimsimrodev.pequenos_sanos.config;
 
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.io.IOException;
 
 /**
- * Redirect controller that provides a convenient URL to access Swagger UI.
+ * Global redirect controller providing a convenient URL to access Swagger UI.
  * Hidden from the API documentation itself.
  */
 @Hidden

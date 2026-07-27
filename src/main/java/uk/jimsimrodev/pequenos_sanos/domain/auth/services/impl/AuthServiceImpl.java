@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.service.impl;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.services.impl;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -10,17 +10,16 @@ import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosJWTToken;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosLoginUsuario;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRegistroUsuario;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRespuestaUsuario;
-import uk.jimsimrodev.pequenos_sanos.domain.auth.repositories.IUsuarioRepository;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Rol;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.repositories.IUsuarioRepository;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.services.IAuthService;
 import uk.jimsimrodev.pequenos_sanos.infra.Result;
 import uk.jimsimrodev.pequenos_sanos.infra.errores.CodigosError;
 import uk.jimsimrodev.pequenos_sanos.infra.security.TokenService;
-import uk.jimsimrodev.pequenos_sanos.service.IAuthService;
 
 /**
- * Implementation of authentication operations including user registration and
- * login.
+ * Implementation of authentication operations including user registration and login.
  */
 @Service
 public class AuthServiceImpl implements IAuthService {
@@ -39,9 +38,9 @@ public class AuthServiceImpl implements IAuthService {
      * @param tokenService          JWT token generation service
      */
     public AuthServiceImpl(IUsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager,
-            TokenService tokenService) {
+                           PasswordEncoder passwordEncoder,
+                           AuthenticationManager authenticationManager,
+                           TokenService tokenService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -60,16 +59,16 @@ public class AuthServiceImpl implements IAuthService {
                 datos.nombre(),
                 datos.email(),
                 passwordEncoder.encode(datos.password()),
-                Rol.PADRE);
+                Rol.PADRE
+        );
 
         final var saved = usuarioRepository.save(usuario);
 
-        final var response = new DatosRespuestaUsuario(
+        return Result.success(new DatosRespuestaUsuario(
                 saved.getId(),
                 saved.getNombre(),
-                saved.getEmail());
-
-        return Result.success(response);
+                saved.getEmail()
+        ));
     }
 
     @Override
