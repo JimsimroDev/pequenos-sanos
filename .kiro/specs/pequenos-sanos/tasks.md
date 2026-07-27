@@ -223,13 +223,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir test unitario para `SessionTimerService`: timer a 0 → `forzarLogout()` es invocado
 - **Refs:** requirements.md REQ-12, REQ-13, design.md §8
 
-### TASK-021: Broadcast de avatares a 30 FPS
+### TASK-021: Broadcast de avatares a 30 FPS ✓
 
-- [ ] Crear tarea `@Scheduled(fixedRate = 33)` en `GameSessionHandler.java` (33 ms ≈ 30 FPS):
+- [x] Crear tarea `@Scheduled(fixedRate = 33)` en `GameSessionHandler.java` (33 ms ≈ 30 FPS):
   - Leer todos los avatares del mapa desde `GameStateStore`
   - Construir `DatosEstadoMapa` (timestamp + lista de AvatarState)
   - Hacer broadcast a `/topic/mapa/{mapId}` vía `SimpMessagingTemplate`
-- [ ] Definir records: `DatosMovimientoAvatar` (perfilId, x, y, direccion), `DatosEstadoMapa` (timestamp, avatares), `DatosTimerUpdate` (minutosRestantes, segundosRestantes), `DatosForceLogout` (codigo, mensaje)
+- [x] Definir records: `DatosMovimientoAvatar` (perfilId, x, y, direccion), `DatosEstadoMapa` (timestamp, avatares), `DatosTimerUpdate` (minutosRestantes, segundosRestantes), `DatosForceLogout` (codigo, mensaje)
 - [ ] Escribir test de integración WebSocket: conectar dos clientes, mover avatar 1, verificar que avatar 2 recibe la posición actualizada
 - **Refs:** requirements.md REQ-11, NFR-01, NFR-05, design.md §5
 
