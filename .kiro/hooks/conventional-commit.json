@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Conventional Commit on Session Stop",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "You are an expert in Conventional Commits and Git best practices.\n\nPerform the following steps IN ORDER. Stop immediately if any step fails and report the error.\n\n## Step 1 — Check for staged or unstaged changes\nRun: git status\n\nIf the output shows \"nothing to commit, working tree clean\", stop here — there is nothing to commit.\n\n## Step 2 — Stage all changes\nRun: git add .\n\n## Step 3 — Inspect the staged diff\nRun: git diff --staged\n\nAnalyze every changed file carefully. Identify:\n- Which layer was modified (controller, service, domain, infra, config, test, docs)\n- The primary intent of the change (new feature, bug fix, refactor, test, docs, chore)\n- The scope (module name: consumo, auth, perfil, recompensa, sesion, websocket, config, etc.)\n\n## Step 4 — Generate the commit message\n\nApply Conventional Commits format strictly:\n\n```\n<type>(<scope>): <short summary>\n\nWhy: <one sentence explaining the reason for the change>\nWhat: <one sentence describing what was changed>\n```\n\nRules:\n- First line: maximum 72 characters, imperative mood, no period at end\n- Type must be one of: feat, fix, refactor, chore, docs, test, perf, build\n- Scope: lowercase module name (omit if change spans many modules)\n- No emojis\n- Why/What body lines are mandatory\n\nExamples of good first lines:\n- feat(consumo): add endpoint to register healthy food intake\n- fix(recompensa): prevent duplicate reward on concurrent requests\n- chore(config): add Flyway migration V1 for usuarios table\n- test(perfil): add WebMvcTest for PerfilController create endpoint\n- refactor(auth): extract token validation to dedicated TokenService\n\n## Step 5 — Create the commit\nRun: git commit -m \"<first line>\" -m \"Why: <why>\" -m \"What: <what>\"\n\nReport the full commit message used and confirm the commit was created successfully.\n"
+      }
+    }
+  ]
+}
