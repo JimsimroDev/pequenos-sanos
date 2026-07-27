@@ -115,12 +115,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Escribir `@WebMvcTest` para `AlimentoController`: listar todos, filtrar por categoría, id inexistente → 404
 - **Refs:** requirements.md REQ-03, design.md §4
 
-### TASK-012: Entidad y repositorio RegistroConsumo
+### TASK-012: Entidad y repositorio RegistroConsumo ✓
 
-- [ ] Crear entidad JPA `RegistroConsumo.java` en `domain/consumo/` con relaciones a `PerfilInfantil`, `Alimento`, `Usuario`
-- [ ] Implementar `IRegistroConsumoRepository.java`: métodos `findByPerfilIdOrderByCreatedAtDesc(Long)`, `existsByPerfilIdAndAlimentoIdAndFechaConsumo(Long, Long, LocalDate)`
-- [ ] Crear records: `DatosRegistroConsumo` (perfilId, alimentoId — ambos `@NotNull`), `DatosRespuestaConsumo`
-- [ ] Escribir `@DataJpaTest`: verificar constraint de unicidad (mismo perfil + alimento + fecha lanza excepción)
+- [x] Crear entidad JPA `RegistroConsumo.java` en `domain/consumo/model/` con relaciones a `PerfilInfantil`, `Alimento`, `Usuario`
+- [x] Implementar `IRegistroConsumoRepository.java`: métodos `findByPerfilIdOrderByCreatedAtDesc(Long)`, `existsByPerfilIdAndAlimentoIdAndFechaConsumo(Long, Long, LocalDate)`
+- [x] Crear records: `DatosRegistroConsumo` (perfilId, alimentoId — ambos `@NotNull`), `DatosRespuestaConsumo`
+- [x] Escribir `@DataJpaTest`: verificar constraint de unicidad (mismo perfil + alimento + fecha lanza excepción)
 - **Refs:** design.md §3, requirements.md REQ-04, REQ-08
 
 ### TASK-013: Entidad y repositorio TransaccionRecompensa
