@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Docker secrets — never commit real .env ###
+/.env

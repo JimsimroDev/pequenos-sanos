@@ -132,6 +132,31 @@ Una vez que la aplicación esté ejecutándose, accede a la interfaz interactiva
 
 ---
 
+## 🐳 Despliegue con Docker
+
+1. **Copiar el archivo de variables de entorno:**
+
+   ```bash
+   cp .env.example .env
+   # Editar .env con tus valores reales
+   ```
+
+2. **Levantar todos los servicios (app + PostgreSQL):**
+
+   ```bash
+   docker-compose up --build
+   ```
+
+   La API estará disponible en `http://localhost:5002`
+
+3. **Verificar salud del servicio:**
+
+   ```
+   GET http://localhost:5002/actuator/health
+   ```
+
+---
+
 ## 🏗️ Arquitectura del Proyecto
 
 Sigue el patrón **Package by Domain** con subcapas técnicas por módulo:
