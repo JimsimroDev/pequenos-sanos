@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.jimsimrodev.pequenos_sanos.controller.resource.AuthResource;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosJWTToken;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosLoginUsuario;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosRegistroUsuario;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosRespuestaUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosJWTToken;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosLoginUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRegistroUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRespuestaUsuario;
 import uk.jimsimrodev.pequenos_sanos.infra.Result;
 import uk.jimsimrodev.pequenos_sanos.service.IAuthService;
 

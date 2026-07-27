@@ -1,9 +1,9 @@
 package uk.jimsimrodev.pequenos_sanos.service;
 
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosJWTToken;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosLoginUsuario;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosRegistroUsuario;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.DatosRespuestaUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosJWTToken;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosLoginUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRegistroUsuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosRespuestaUsuario;
 import uk.jimsimrodev.pequenos_sanos.infra.Result;
 
 /**
