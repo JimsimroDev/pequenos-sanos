@@ -123,12 +123,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Escribir `@DataJpaTest`: verificar constraint de unicidad (mismo perfil + alimento + fecha lanza excepción)
 - **Refs:** design.md §3, requirements.md REQ-04, REQ-08
 
-### TASK-013: Entidad y repositorio TransaccionRecompensa
+### TASK-013: Entidad y repositorio TransaccionRecompensa ✓
 
-- [ ] Crear entidad JPA `TransaccionRecompensa.java` en `domain/recompensa/` con relación a `RegistroConsumo` y `PerfilInfantil`
-- [ ] Implementar `ITransaccionRecompensaRepository.java`: método `findByPerfilIdOrderByCreatedAtDesc(Long)`
-- [ ] Crear record `DatosRespuestaRecompensa` (id, monedasAcreditadas, tipo, createdAt, nombreAlimento)
-- [ ] Escribir `@DataJpaTest`: verificar constraint UNIQUE en registro_consumo_id
+- [x] Crear entidad JPA `TransaccionRecompensa.java` en `domain/recompensa/model/` con relación a `RegistroConsumo` y `PerfilInfantil`
+- [x] Implementar `ITransaccionRecompensaRepository.java`: método `findByPerfilIdOrderByCreatedAtDesc(Long)`
+- [x] Crear record `DatosRespuestaRecompensa` (id, monedasAcreditadas, tipo, createdAt, nombreAlimento)
+- [x] Escribir `@DataJpaTest`: verificar constraint UNIQUE en registro_consumo_id
 - **Refs:** design.md §3, requirements.md REQ-07, REQ-08
 
 ### TASK-014: Motor transaccional — registrar consumo y acreditar recompensa
