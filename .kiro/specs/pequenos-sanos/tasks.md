@@ -244,12 +244,12 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] `@SpringBootTest` flujo Módulo 3: iniciar sesión → tiempo agotado → intento de reconexión → `TIEMPO_AGOTADO`
 - **Refs:** requirements.md todos los REQs, design.md §10
 
-### TASK-023: Seguridad — pruebas de autorización
+### TASK-023: Seguridad — pruebas de autorización ✓
 
-- [ ] Test: endpoint con JWT expirado → 403
-- [ ] Test: padre A intenta acceder a perfil del padre B → 403
-- [ ] Test: niño intenta llamar endpoint de registro de consumo (solo padre) → 403
-- [ ] Test: request sin token a endpoint protegido → 401
+- [x] Test: endpoint con JWT expirado → 403
+- [x] Test: padre A intenta acceder a perfil del padre B → 403
+- [x] Test: niño intenta llamar endpoint de registro de consumo (solo padre) → 403
+- [x] Test: request sin token a endpoint protegido → 401
 - **Refs:** requirements.md NFR-04, design.md §7
 
 ### TASK-024: Documentación y limpieza final
