@@ -135,6 +135,9 @@ Run Workflow C if not already pushed.
 - Body: structured template below
 - **Issue number**: Run `gh issue list --state open --search "TASK-<id>"` to find the
   GitHub issue number. If no issue exists, omit the "Closes" line.
+- **Milestone**: Run `gh api repos/{owner}/{repo}/milestones` to find the active milestone name.
+  Use the milestone that corresponds to the current phase/sprint.
+- **Project**: Always use `"desarrollo pequenos-sanos"` as the project board name.
 
 ### Step 3 — Create PR with gh CLI
 
@@ -142,6 +145,8 @@ Run Workflow C if not already pushed.
 gh pr create \
   --base develop \
   --title "<type>(<scope>): <summary>" \
+  --milestone "<Nombre exacto del Milestone>" \
+  --project "desarrollo pequenos-sanos" \
   --body "## Summary
 <what this PR does in 2-3 sentences>
 
@@ -149,7 +154,6 @@ gh pr create \
 - <bullet list of main changes>
 
 ## Task
-TASK-<id>
 Closes #<github-issue-number>
 
 ## Testing
@@ -167,6 +171,20 @@ Closes #<github-issue-number>
 ### Step 4 — Report
 
 Show the PR URL and title. Remind the user to request a reviewer.
+
+---
+
+## Milestone Reference
+
+Use the following mapping to determine which `--milestone` to pass:
+
+| TASK Range   | Milestone                                     |
+| ------------ | --------------------------------------------- |
+| TASK-001–005 | `Fase 0 - Fundación del Proyecto`             |
+| TASK-006–015 | `Fase 1 - Módulo Parental y Nutricional`      |
+| TASK-016     | `Fase 2 - Motor Transaccional de Recompensas` |
+| TASK-017–021 | `Fase 3 - Motor MMO y Tiempo Real`            |
+| TASK-022–024 | `Fase 4 - Calidad, QA y Cierre`               |
 
 ---
 
