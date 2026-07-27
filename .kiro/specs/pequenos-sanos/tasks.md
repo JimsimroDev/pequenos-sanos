@@ -195,16 +195,16 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Verificar conexión WebSocket desde Postman/cliente de prueba
 - **Refs:** design.md §5 (WebSocket Protocol), requirements.md REQ-11
 
-### TASK-019: Servicio de sesión de juego — iniciar y validar tiempo
+### TASK-019: Servicio de sesión de juego — iniciar y validar tiempo ✓
 
-- [ ] Crear `SesionService.java` en `service/`: método `@Transactional iniciar(Long perfilId) → Result<DatosRespuestaSesion>`
+- [x] Crear `SesionService.java` en `service/`: método `@Transactional iniciar(Long perfilId) → Result<DatosRespuestaSesion>`
   - Cargar perfil y `screen_time_limit`
   - Consultar `SesionJuego` del día: si existe y cerrada con `minutos_jugados >= limit` → `TIEMPO_AGOTADO`
   - Si sesión activa ya existe → `SESION_ACTIVA`
   - Crear nueva `SesionJuego` con `inicio = now()`
   - Registrar timer en `GameStateStore`
-- [ ] Crear endpoint `POST /api/v1/sesiones/iniciar` en `SesionController.java` → 201 con datos de sesión
-- [ ] Escribir test unitario para `SesionService.iniciar()`: caso exitoso, tiempo agotado, sesión ya activa
+- [x] Crear endpoint `POST /api/v1/sesiones/iniciar` en `SesionController.java` → 201 con datos de sesión
+- [x] Escribir test unitario para `SesionService.iniciar()`: caso exitoso, tiempo agotado, sesión ya activa
 - **Refs:** requirements.md REQ-10, REQ-12, design.md §8
 
 ### TASK-020: Temporizador en tiempo real y Force Logout
