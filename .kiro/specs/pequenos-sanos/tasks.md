@@ -72,13 +72,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@DataJpaTest` para `IUsuarioRepository`: buscar por email existente y no existente
 - **Refs:** design.md §3, design.md §2
 
-### TASK-007: Autenticación — registro y login
+### TASK-007: Autenticación — registro y login ✓
 
-- [ ] Crear `AuthController.java` en `controller/` con `POST /api/v1/auth/registro` y `POST /api/v1/auth/login`
-- [ ] Implementar lógica de registro en service: hashear password con BCrypt, persistir usuario, retornar `DatosRespuestaUsuario`
-- [ ] Implementar lógica de login: autenticar con `AuthenticationManager`, generar JWT, retornar `DatosJWTToken`
-- [ ] Retornar 201 en registro, 200 con token en login, 400 si email ya existe
-- [ ] Escribir `@WebMvcTest` para `AuthController`: registro exitoso → 201, email duplicado → 409, datos inválidos → 400
+- [x] Crear `AuthController.java` en `controller/` con `POST /api/v1/auth/registro` y `POST /api/v1/auth/login`
+- [x] Implementar lógica de registro en service: hashear password con BCrypt, persistir usuario, retornar `DatosRespuestaUsuario`
+- [x] Implementar lógica de login: autenticar con `AuthenticationManager`, generar JWT, retornar `DatosJWTToken`
+- [x] Retornar 201 en registro, 200 con token en login, 400 si email ya existe
+- [x] Escribir `@WebMvcTest` para `AuthController`: registro exitoso → 201, email duplicado → 409, datos inválidos → 400
 - **Refs:** requirements.md REQ-01, design.md §4, design.md §7
 
 ### TASK-008: Entidad y repositorio PerfilInfantil
