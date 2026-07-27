@@ -185,13 +185,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir `@DataJpaTest`: constraint UNIQUE(perfil_id, fecha_sesion)
 - **Refs:** design.md §3, requirements.md REQ-10, REQ-13
 
-### TASK-018: Configurar WebSocket con STOMP
+### TASK-018: Configurar WebSocket con STOMP ✓
 
-- [ ] Crear `WebSocketConfig.java` en `config/`: registrar endpoint `/game` con SockJS, configurar message broker `/topic` y `/user`, application prefix `/app`
-- [ ] Crear `GameStateStore.java` en `websocket/`: `ConcurrentHashMap` para avatares, timers y sesiones WS
-- [ ] Implementar `GameSessionHandler.java` en `websocket/` como `@Controller` con `@MessageMapping`:
-  - `@MessageMapping("/mover")` → actualiza posición en `GameStateStore`
-  - `@SubscribeMapping("/mapa/{mapId}")` → registra avatar en el mapa
+- [x] Crear `WebSocketConfig.java` en `config/`: registrar endpoint `/game` con SockJS, configurar message broker `/topic` y `/user`, application prefix `/app`
+- [x] Crear `GameStateStore.java` en `websocket/`: `ConcurrentHashMap` para avatares, timers y sesiones WS
+- [x] Implementar `GameSessionHandler.java` en `websocket/` como `@Controller` con `@MessageMapping`:
+  - [x] `@MessageMapping("/mover")` → actualiza posición en `GameStateStore`
+  - [x] `@SubscribeMapping("/mapa/{mapId}")` → registra avatar en el mapa
 - [ ] Verificar conexión WebSocket desde Postman/cliente de prueba
 - **Refs:** design.md §5 (WebSocket Protocol), requirements.md REQ-11
 
