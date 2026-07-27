@@ -207,20 +207,20 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [ ] Escribir test unitario para `SesionService.iniciar()`: caso exitoso, tiempo agotado, sesión ya activa
 - **Refs:** requirements.md REQ-10, REQ-12, design.md §8
 
-### TASK-020: Temporizador en tiempo real y Force Logout
+### TASK-020: Temporizador en tiempo real y Force Logout ✓
 
-- [ ] Crear `SessionTimerService.java` en `websocket/` con `@Scheduled(fixedRate = 1000)`:
+- [x] Crear `SessionTimerService.java` en `websocket/` con `@Scheduled(fixedRate = 1000)`:
   - Iterar sobre todos los timers activos en `GameStateStore`
   - Decrementar tiempo restante cada segundo
   - Cada 10 segundos → enviar `DatosTimerUpdate` al cliente vía `/user/queue/timer`
   - Al llegar a 0 → disparar Force Logout
-- [ ] Implementar `forzarLogout(Long perfilId)`:
+- [x] Implementar `forzarLogout(Long perfilId)`:
   - Enviar mensaje a `/user/queue/logout` con código `TIME_EXPIRED`
   - Cerrar `WebSocketSession`
   - Actualizar `SesionJuego.fin` y `minutos_jugados` en BD (`@Transactional`)
   - Remover de `GameStateStore`
-- [ ] Habilitar `@EnableScheduling` en `PequenosSanosApplication`
-- [ ] Escribir test unitario para `SessionTimerService`: timer a 0 → `forzarLogout()` es invocado
+- [x] Habilitar `@EnableScheduling` en `PequenosSanosApplication`
+- [x] Escribir test unitario para `SessionTimerService`: timer a 0 → `forzarLogout()` es invocado
 - **Refs:** requirements.md REQ-12, REQ-13, design.md §8
 
 ### TASK-021: Broadcast de avatares a 30 FPS
