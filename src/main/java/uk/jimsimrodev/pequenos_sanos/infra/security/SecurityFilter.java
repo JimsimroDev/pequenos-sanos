@@ -8,13 +8,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.IUsuarioRepository;
-import uk.jimsimrodev.pequenos_sanos.domain.usuario.Usuario;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.repositories.IUsuarioRepository;
+import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 
 import java.io.IOException;
 
 /**
- * JWT authentication filter that intercepts every request, extracts the Bearer token
+ * JWT authentication filter that intercepts every request, extracts the Bearer
+ * token
  * from the Authorization header, validates it, and sets the SecurityContext.
  */
 @Component
@@ -36,8 +37,8 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         final String token = extractToken(request);
@@ -56,8 +57,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         var authentication = new UsernamePasswordAuthenticationToken(
                 usuario,
                 null,
-                usuario.getAuthorities()
-        );
+                usuario.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 

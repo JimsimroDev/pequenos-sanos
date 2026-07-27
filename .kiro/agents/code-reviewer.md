@@ -40,7 +40,7 @@ Check each file against ALL of the following:
 
 **Architecture & Structure**
 
-- [ ] File is in the correct package (`uk.jimsimrodev.pequenos_sanos.*`)
+- [ ] File is in the correct package (`uk.jimsimrodev.pequenos_sanos.domain.<module>.*`)
 - [ ] Layer separation respected (no business logic in controllers)
 - [ ] No raw JPA entities exposed in controller responses
 - [ ] DTOs are `record` types prefixed with `Datos`

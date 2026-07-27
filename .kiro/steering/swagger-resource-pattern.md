@@ -12,13 +12,13 @@ When creating or modifying REST endpoints, apply the **Interface Resource patter
 All OpenAPI/Swagger documentation MUST reside in an interface within the `resource` subpackage:
 
 ```
-uk.jimsimrodev.pequenos_sanos.controller.resource.<Nombre>Resource.java
+uk.jimsimrodev.pequenos_sanos.domain.<module>.controllers.resource.<Nombre>Resource.java
 ```
 
-The concrete controller resides directly in the `controller` package:
+The concrete controller resides directly in the domain controllers package:
 
 ```
-uk.jimsimrodev.pequenos_sanos.controller.<Nombre>Controller.java
+uk.jimsimrodev.pequenos_sanos.domain.<module>.controllers.<Nombre>Controller.java
 ```
 
 ## 2. Interface Resource Rules
@@ -82,15 +82,17 @@ public class DocumentationController {
 ## 5. Example Structure
 
 ```
-controller/
-├── resource/
-│   ├── AuthResource.java          ← @Tag + @Operation + @ApiResponse
-│   ├── PerfilResource.java
-│   ├── ConsumoResource.java
-│   └── RecompensaResource.java
-├── AuthController.java            ← implements AuthResource (zero Swagger annotations)
-├── PerfilController.java
-├── ConsumoController.java
-├── RecompensaController.java
-└── DocumentationController.java   ← @Hidden redirect to /swagger-ui.html
+uk.jimsimrodev.pequenos_sanos.domain
+├── auth/
+│   ├── controllers/
+│   │   ├── resource/
+│   │   │   └── AuthResource.java          ← @Tag + @Operation + @ApiResponse
+│   │   └── AuthController.java            ← @RestController (zero Swagger annotations)
+│   └── ...
+└── perfil/
+    ├── controllers/
+    │   ├── resource/
+    │   │   └── PerfilResource.java
+    │   └── PerfilController.java
+    └── ...
 ```
