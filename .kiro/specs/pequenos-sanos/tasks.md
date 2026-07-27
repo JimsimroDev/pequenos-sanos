@@ -252,13 +252,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Test: request sin token a endpoint protegido → 401
 - **Refs:** requirements.md NFR-04, design.md §7
 
-### TASK-024: Documentación y limpieza final
+### TASK-024: Documentación y limpieza final ✓
 
-- [ ] Agregar Javadoc a todos los métodos `public` de controllers, services y repositorios
-- [ ] Verificar que todos los endpoints aparecen correctamente en Swagger UI con descripciones
-- [ ] Revisar logs: asegurar que ningún endpoint loguea datos sensibles (passwords, tokens)
-- [ ] Crear `README.md` en raíz del proyecto con instrucciones de setup (BD, variables de entorno, cómo correr)
-- [ ] Verificar que `mvn clean test` pasa sin errores
+- [x] Agregar Javadoc a todos los métodos `public` de controllers, services y repositorios
+- [x] Verificar que todos los endpoints aparecen correctamente en Swagger UI con descripciones
+- [x] Revisar logs: asegurar que ningún endpoint loguea datos sensibles (passwords, tokens)
+- [x] Crear `README.md` en raíz del proyecto con instrucciones de setup (BD, variables de entorno, cómo correr)
+- [x] Verificar que `mvn clean test` pasa sin errores
 - **Refs:** steering: core-standards.md (Logging, Javadoc)
 
 ---
