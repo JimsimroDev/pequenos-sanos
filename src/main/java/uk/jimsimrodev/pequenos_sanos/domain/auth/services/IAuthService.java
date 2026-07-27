@@ -1,4 +1,4 @@
-package uk.jimsimrodev.pequenos_sanos.service;
+package uk.jimsimrodev.pequenos_sanos.domain.auth.services;
 
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosJWTToken;
 import uk.jimsimrodev.pequenos_sanos.domain.auth.dto.DatosLoginUsuario;
@@ -15,8 +15,7 @@ public interface IAuthService {
      * Registers a new parent/tutor user.
      *
      * @param datos registration data with name, email, and password
-     * @return Result.Success with user data, or Result.Error if email already
-     *         exists
+     * @return Result.Success with user data, or Result.Error if email already exists
      */
     Result<DatosRespuestaUsuario> registrar(DatosRegistroUsuario datos);
 
@@ -24,8 +23,7 @@ public interface IAuthService {
      * Authenticates a user and generates a JWT token.
      *
      * @param datos login data with email and password
-     * @return Result.Success with JWT token, or Result.Error if credentials are
-     *         invalid
+     * @return Result.Success with JWT token, or Result.Error if credentials are invalid
      */
     Result<DatosJWTToken> login(DatosLoginUsuario datos);
 }
