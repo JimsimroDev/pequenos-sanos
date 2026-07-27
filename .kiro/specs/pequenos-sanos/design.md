@@ -30,7 +30,7 @@ El sistema se compone de dos motores independientes que colaboran:
 
 | Capa                  | Tecnología                           |
 | --------------------- | ------------------------------------ |
-| Backend transaccional | Java 25 + Spring Boot 3.x            |
+| Backend transaccional | Java 21 + Spring Boot 3.x            |
 | Persistencia          | Spring Data JPA + PostgreSQL         |
 | Seguridad             | Spring Security + JWT (jjwt)         |
 | Motor tiempo real     | Spring WebSocket (STOMP over SockJS) |
@@ -59,6 +59,7 @@ uk/jimsimrodev/pequenos_sanos/
 ├── domain/
 │   ├── usuario/
 │   │   ├── Usuario.java
+│   │   ├── Rol.java
 │   │   ├── IUsuarioRepository.java
 │   │   ├── DatosRegistroUsuario.java
 │   │   └── DatosLoginUsuario.java
@@ -119,6 +120,7 @@ usuarios
 ├── nombre          VARCHAR(100) NOT NULL
 ├── email           VARCHAR(150) NOT NULL UNIQUE
 ├── password_hash   VARCHAR(255) NOT NULL
+├── rol             VARCHAR(20) NOT NULL DEFAULT 'PADRE'  -- PADRE, NINO
 ├── activo          BOOLEAN DEFAULT TRUE
 ├── created_at      TIMESTAMP NOT NULL
 └── updated_at      TIMESTAMP
@@ -355,7 +357,11 @@ public Result<DatosRespuestaConsumo> registrar(DatosRegistroConsumo datos) {
 
 - Autenticación: JWT Bearer token, expira en 2 horas.
 - Contraseñas: BCrypt (strength 10).
-- Autorización: `@PreAuthorize` sobre endpoints sensibles.
+- Roles: Enum `Rol` con valores `PADRE` y `NINO`, almacenado en la tabla `usuarios`.
+- Autorización: Role-based con `ROLE_PADRE` y `ROLE_NINO` en Spring Security authorities.
+  - `PADRE`: gestiona perfiles, registra consumos, consulta reportes.
+  - `NINO`: juega en el mundo virtual, consulta su saldo de monedas.
+- El JWT incluye claims: `id`, `nombre`, `rol` (además del `subject` = email).
 - El Padre solo accede a sus propios perfiles (validación en service layer).
 - El Niño se autentica con `perfilId` + PIN de 4 dígitos (simplificado para MVP).
 - CORS configurado para el origen del cliente web.

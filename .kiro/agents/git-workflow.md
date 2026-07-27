@@ -133,6 +133,8 @@ Run Workflow C if not already pushed.
 - Target branch: `develop` (always — never `main` directly)
 - Title: same format as commit first line
 - Body: structured template below
+- **Issue number**: Run `gh issue list --state open --search "TASK-<id>"` to find the
+  GitHub issue number. If no issue exists, omit the "Closes" line.
 
 ### Step 3 — Create PR with gh CLI
 
@@ -147,7 +149,8 @@ gh pr create \
 - <bullet list of main changes>
 
 ## Task
-Closes TASK-<id>
+TASK-<id>
+Closes #<github-issue-number>
 
 ## Testing
 - [ ] Unit tests pass
