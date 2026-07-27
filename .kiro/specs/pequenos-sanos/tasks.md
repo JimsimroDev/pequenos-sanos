@@ -10,13 +10,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 
 ## Fase 0 — Fundación del Proyecto
 
-### TASK-001: Inicializar proyecto Spring Boot
+### TASK-001: Inicializar proyecto Spring Boot ✓
 
-- [ ] Crear proyecto Maven con Spring Boot 3.x y Java 21 en `src/`
-- [ ] Agregar dependencias: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-websocket`, `spring-boot-starter-validation`, `postgresql`, `flyway-core`, `jjwt-api`, `jjwt-impl`, `springdoc-openapi-starter-webmvc-ui`
-- [ ] Configurar `application.yml`: datasource (PostgreSQL), JPA (ddl-auto: validate), Flyway, server port 8080
-- [ ] Crear clase principal `PequenosSanosApplication.java` en `uk.jimsimrodev.pequenos_sanos`
-- [ ] Verificar que la aplicación inicia sin errores
+- [x] Crear proyecto Maven con Spring Boot 3.x y Java 21 en `src/`
+- [x] Agregar dependencias: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-websocket`, `spring-boot-starter-validation`, `postgresql`, `flyway-core`, `jjwt-api`, `jjwt-impl`, `springdoc-openapi-starter-webmvc-ui`
+- [x] Configurar `application.yml`: datasource (PostgreSQL), JPA (ddl-auto: validate), Flyway, server port 8080
+- [x] Crear clase principal `PequenosSanosApplication.java` en `uk.jimsimrodev.pequenos_sanos`
+- [x] Verificar que la aplicación inicia sin errores
 - **Refs:** design.md §2 (Package Structure), design.md §1 (Tech Stack)
 
 ### TASK-002: Configurar base de datos y migraciones Flyway
