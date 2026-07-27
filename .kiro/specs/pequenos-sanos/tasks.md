@@ -41,13 +41,13 @@ Cada tarea es atómica, verificable y referencia los requisitos y el diseño del
 - [x] Escribir test unitario para `TokenService`: genera token, extrae subject correctamente
 - **Refs:** design.md §7 (Security Design), requirements.md REQ-01
 
-### TASK-004: Implementar manejo global de errores
+### TASK-004: Implementar manejo global de errores ✓
 
-- [ ] Crear `TratadorDeErrores.java` en `infra/errores/` con `@RestControllerAdvice`
-- [ ] Manejar: `EntityNotFoundException` → 404, `AccessDeniedException` → 403, `MethodArgumentNotValidException` → 400 (incluir detalle de campos), `DataIntegrityViolationException` → 409, `Exception` → 500
-- [ ] Crear clase `Result<T>` en `infra/` con variantes `Result.Success<T>` y `Result.Error` (código + mensaje)
-- [ ] Definir constantes de códigos de error en `infra/errores/CodigosError.java`
-- [ ] Verificar que errores de validación de DTO retornan 400 con lista de campos inválidos
+- [x] Crear `TratadorDeErrores.java` en `infra/errores/` con `@RestControllerAdvice`
+- [x] Manejar: `EntityNotFoundException` → 404, `AccessDeniedException` → 403, `MethodArgumentNotValidException` → 400 (incluir detalle de campos), `DataIntegrityViolationException` → 409, `Exception` → 500
+- [x] Crear clase `Result<T>` en `infra/` con variantes `Result.Success<T>` y `Result.Error` (código + mensaje)
+- [x] Definir constantes de códigos de error en `infra/errores/CodigosError.java`
+- [x] Verificar que errores de validación de DTO retornan 400 con lista de campos inválidos
 - **Refs:** design.md §9 (Error Handling), steering: service-error-handling.md
 
 ### TASK-005: Configurar Swagger/OpenAPI
