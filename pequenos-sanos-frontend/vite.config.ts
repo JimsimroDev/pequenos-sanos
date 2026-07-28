@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',   // relative base — works on any GitHub Pages subpath
+  base: '/pequenos-sanos-frontend/',   // relative base — works on any GitHub Pages subpath
   server: {
     port: 3000,
   },
