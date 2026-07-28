@@ -14,6 +14,7 @@ export interface AvatarPosition {
   y: number
   direccion: string
   color: string
+  avatarCodigo?: string
 }
 
 export interface TimerUpdate {
@@ -51,6 +52,7 @@ export const gameSocket = {
 
     const token = useAuthStore.getState().token
     const color = useGameStore.getState().avatarColor
+    const avatarCodigo = useAuthStore.getState().avatarCodigo || undefined
 
     stompClient = new Client({
       webSocketFactory: () => new SockJS(`${BASE_URL}/game`),
@@ -99,7 +101,7 @@ export const gameSocket = {
         })
 
         // Send initial position to register on the map — backend listens on /app/mover
-        const initialPayload = { perfilId, nombre: useGameStore.getState().nombrePerfil || '', x: 600, y: 480, direccion: 'idle', color }
+        const initialPayload = { perfilId, nombre: useGameStore.getState().nombrePerfil || '', x: 600, y: 480, direccion: 'idle', color, avatarCodigo }
         console.log('[WS] 📍 Enviando posición inicial:', initialPayload)
         stompClient!.publish({
           destination: '/app/mover',
@@ -122,9 +124,24 @@ export const gameSocket = {
   sendMove(perfilId: number, nombre: string, x: number, y: number, direccion: string) {
     if (!stompClient?.connected) return
     const color = useGameStore.getState().avatarColor
+    const avatarCodigo = useAuthStore.getState().avatarCodigo || undefined
     stompClient.publish({
       destination: '/app/mover',
-      body: JSON.stringify({ perfilId, nombre, x, y, direccion, color }),
+      body: JSON.stringify({ perfilId, nombre, x, y, direccion, color, avatarCodigo }),
+    })
+  },
+
+  sendAvatarChange(perfilId: number, avatarCodigo: string, color: string) {
+    if (!stompClient?.connected) return
+    stompClient.publish({
+      destination: '/app/mover',
+      body: JSON.stringify({
+        perfilId,
+        nombre: useGameStore.getState().nombrePerfil || '',
+        x: 0, y: 0, direccion: 'idle',
+        color,
+        avatarCodigo,
+      }),
     })
   },
 

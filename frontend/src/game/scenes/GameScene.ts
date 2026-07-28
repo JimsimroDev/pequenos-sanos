@@ -4,6 +4,7 @@ import { alimentoService, AlimentoResponse, SUPERPODERS } from '../../api/alimen
 import { consumoService } from '../../api/consumoService'
 import { pendingConsumos } from '../../api/pendingConsumos'
 import { useGameStore } from '../../store/gameStore'
+import { useAuthStore } from '../../store/authStore'
 import { soundManager } from '../SoundManager'
 
 const TILE = 48
@@ -12,6 +13,27 @@ const MAP_ROWS = 20
 const PLAYER_SPEED = 160
 const FOOD_COUNT = 12
 const SUPERPODER_DURATION = 30000
+
+/** Map avatar codes to their pony emoji and color */
+const PONY_EMOJIS: Record<string, string> = {
+  TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
+  EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
+}
+const PONY_COLORS: Record<string, string> = {
+  TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
+  EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
+}
+
+/** Derive a pony emoji from color or avatarCodigo */
+function getPonyEmoji(avatarCodigo?: string, color?: string): string {
+  if (avatarCodigo && PONY_EMOJIS[avatarCodigo]) return PONY_EMOJIS[avatarCodigo]
+  if (color) {
+    // Fallback: map color back to pony
+    const match = Object.entries(PONY_COLORS).find(([, c]) => c === color)
+    if (match) return PONY_EMOJIS[match[0]] || '🦄'
+  }
+  return '🦄'
+}
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
@@ -63,6 +85,10 @@ export class GameScene extends Phaser.Scene {
   private score = 0
   private scoreText!: Phaser.GameObjects.Text
   private tileMap: Phaser.GameObjects.Rectangle[][] = []
+  // Settings / pause
+  private settingsBtn!: Phaser.GameObjects.Text
+  private isPaused = false
+  private pauseOverlay!: Phaser.GameObjects.Rectangle
 
   constructor() {
     super({ key: 'GameScene' })
@@ -83,6 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.createPlayer()
     this.createControls()
     this.createHUD()
+    this.createSettingsUI()
     this.createPowerOverlay()
     this.createDialogBox()
     this.spawnFoods()
@@ -135,11 +162,7 @@ export class GameScene extends Phaser.Scene {
     const colorHex = parseInt(this.sceneData.avatarColor.replace('#', ''), 16)
 
     // Avatar emoji based on selected MLP pony character
-    const PONY_EMOJIS: Record<string, string> = {
-      TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
-      EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
-    }
-    const avatarEmoji = PONY_EMOJIS[this.sceneData.avatarCodigo] || '🦄'
+    const avatarEmoji = getPonyEmoji(this.sceneData.avatarCodigo, this.sceneData.avatarColor)
 
     this.playerBody = this.add.circle(0, 0, 20, colorHex)
     this.playerBody.setStrokeStyle(3, 0xffffff)
@@ -169,6 +192,78 @@ export class GameScene extends Phaser.Scene {
       fontSize: '20px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#065f46', strokeThickness: 4,
     }).setScrollFactor(0).setDepth(100)
+  }
+
+  /** Creates the settings gear button and pause overlay */
+  private createSettingsUI() {
+    // Gear button in top-right corner
+    this.settingsBtn = this.add.text(this.scale.width - 20, 16, '⚙️', {
+      fontSize: '24px',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(110)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.openSettings())
+      .on('pointerover', () => this.settingsBtn.setAlpha(0.7))
+      .on('pointerout', () => this.settingsBtn.setAlpha(1))
+
+    // Pause overlay — darkens the screen
+    this.pauseOverlay = this.add.rectangle(
+      this.scale.width / 2, this.scale.height / 2,
+      this.scale.width, this.scale.height,
+      0x000000, 0
+    ).setScrollFactor(0).setDepth(190).setVisible(false)
+  }
+
+  /** Opens the character select in settings mode */
+  private openSettings() {
+    if (this.isPaused) return
+    this.isPaused = true
+
+    // Dim overlay with animation
+    this.pauseOverlay.setVisible(true).setAlpha(0)
+    this.tweens.add({ targets: this.pauseOverlay, alpha: 0.5, duration: 300 })
+
+    // Launch CharacterSelectScene on top
+    this.scene.launch('CharacterSelectScene', {
+      perfilId: this.sceneData.perfilId,
+      nombrePerfil: this.sceneData.nombrePerfil,
+      avatarCodigo: this.sceneData.avatarCodigo,
+      avatarColor: this.sceneData.avatarColor,
+      settingsMode: true,
+      onComplete: (key: string, color: string) => {
+        this.updateAvatar(key, color)
+        this.scene.stop('CharacterSelectScene')
+        // Remove dim overlay
+        this.tweens.add({
+          targets: this.pauseOverlay, alpha: 0, duration: 200,
+          onComplete: () => this.pauseOverlay.setVisible(false),
+        })
+        this.isPaused = false
+      },
+    })
+  }
+
+  /** Updates the local player avatar and broadcasts to other players */
+  private updateAvatar(key: string, color: string) {
+    // Update scene data
+    this.sceneData.avatarCodigo = key
+    this.sceneData.avatarColor = color
+
+    // Persist
+    useAuthStore.getState().setAvatarCodigo(key)
+    useAuthStore.getState().setAvatarColor(color)
+    useGameStore.getState().setAvatarColor(color)
+
+    // Recreate player visuals
+    const oldX = this.player.x
+    const oldY = this.player.y
+    this.player.destroy()
+    this.createPlayer()
+    this.player.setPosition(oldX, oldY)
+
+    // Broadcast avatar change to other players via WS
+    gameSocket.sendAvatarChange(this.sceneData.perfilId, key, color)
+
+    soundManager.playClick()
   }
 
   private createPowerOverlay() {
@@ -359,21 +454,29 @@ export class GameScene extends Phaser.Scene {
             x: av.x,
             y: av.y,
             color: av.color,
+            avatarCodigo: av.avatarCodigo,
           })
         })
       },
     })
   }
 
-  private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string }) {
+  private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string; avatarCodigo?: string }) {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
       this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
+      // Update avatar emoji if it changed
+      const existingFace = op.container.list[1] as Phaser.GameObjects.Text
+      if (existingFace && av.avatarCodigo) {
+        const newEmoji = getPonyEmoji(av.avatarCodigo, av.color)
+        if (existingFace.text !== newEmoji) existingFace.setText(newEmoji)
+      }
     } else {
       const body = this.add.circle(0, 0, 18, colorHex)
       body.setStrokeStyle(2, 0xffffff)
-      const face = this.add.text(0, -2, '😄', { fontSize: '16px' }).setOrigin(0.5)
+      const ponyEmoji = getPonyEmoji(av.avatarCodigo, av.color)
+      const face = this.add.text(0, -2, ponyEmoji, { fontSize: '16px' }).setOrigin(0.5)
       const nameTag = this.add.text(0, 24, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
@@ -526,6 +629,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    if (this.isPaused) return // Don't move when settings are open
+
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
     let dx = 0, dy = 0
     let dir = 'idle'

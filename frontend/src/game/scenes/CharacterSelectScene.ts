@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { COLORES_AVATARES } from '../../store/gameStore'
+import { soundManager } from '../SoundManager'
 
 const PERSONAJES = [
   { key: 'TWILIGHT', emoji: '🦄', nombre: 'Twilight Sparkle', frase: '¡La magia de la amistad y las frutas!', color: '#9333ea' },
@@ -13,6 +14,7 @@ export interface CharacterSelectData {
   nombrePerfil: string
   avatarCodigo: string
   avatarColor: string
+  settingsMode?: boolean
   onComplete: (key: string, color: string) => void
 }
 
@@ -55,18 +57,27 @@ export class CharacterSelectScene extends Phaser.Scene {
       )
     }
 
-    this.add.text(width / 2, 50, '✨ Elige tu personaje', {
+    const isSettings = this.sceneData.settingsMode
+    this.add.text(width / 2, 50, isSettings ? '⚙️ Cambiar personaje' : '✨ Elige tu personaje', {
       fontSize: '28px',
       color: '#f0fdf4',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     }).setOrigin(0.5)
 
-    this.add.text(width / 2, 85, `Hola, ${this.sceneData.nombrePerfil}! ¿Quién quieres ser hoy?`, {
-      fontSize: '15px',
-      color: '#86efac',
-      fontFamily: 'Arial',
-    }).setOrigin(0.5)
+    if (isSettings) {
+      this.add.text(width / 2, 85, 'Selecciona un nuevo personaje y color', {
+        fontSize: '14px',
+        color: '#94a3b8',
+        fontFamily: 'Arial',
+      }).setOrigin(0.5)
+    } else {
+      this.add.text(width / 2, 85, `Hola, ${this.sceneData.nombrePerfil}! ¿Quién quieres ser hoy?`, {
+        fontSize: '15px',
+        color: '#86efac',
+        fontFamily: 'Arial',
+      }).setOrigin(0.5)
+    }
 
     // Character cards — MLP ponies
     const cardW = 150, cardH = 195
@@ -117,12 +128,14 @@ export class CharacterSelectScene extends Phaser.Scene {
       return dot
     })
 
-    // Play button
+    // Play / confirm button
+    const isSettings = this.sceneData.settingsMode
+    const btnLabel = isSettings ? '✅ ¡Listo!' : '🎮 ¡Comenzar aventura!'
     const playBtn = this.add.rectangle(width / 2, height - 60, 220, 50, 0x10b981)
     playBtn.setStrokeStyle(2, 0x065f46)
     playBtn.setInteractive({ useHandCursor: true })
 
-    const playText = this.add.text(width / 2, height - 60, '🎮 ¡Comenzar aventura!', {
+    const playText = this.add.text(width / 2, height - 60, btnLabel, {
       fontSize: '16px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5)
 
@@ -159,7 +172,14 @@ export class CharacterSelectScene extends Phaser.Scene {
   private startGame() {
     const char = PERSONAJES[this.selectedChar]
     const color = COLORES_AVATARES[this.selectedColor]
+    soundManager.playClick()
     this.sceneData.onComplete(char.key, color)
-    this.scene.start('GameScene', { ...this.sceneData, avatarCodigo: char.key, avatarColor: color })
+
+    if (this.sceneData.settingsMode) {
+      // Stop ourselves — GameScene handles the resume
+      this.scene.stop()
+    } else {
+      this.scene.start('GameScene', { ...this.sceneData, avatarCodigo: char.key, avatarColor: color })
+    }
   }
 }

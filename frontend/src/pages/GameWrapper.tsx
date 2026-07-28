@@ -105,9 +105,13 @@ export default function GameWrapper() {
         if (!found) { setError('Perfil no encontrado'); setLoading(false); return }
         setPerfil(found)
         setPerfilId(found.id, found.nombre)
-        // Persist avatar selection for next session
+        // Persist avatar selection for next session — use pony color from code if known
+        const PONY_COLORS: Record<string, string> = {
+          TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
+          EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
+        }
         setAvatarCodigo(found.avatarCodigo)
-        setAvatarColor(useGameStore.getState().avatarColor)
+        setAvatarColor(PONY_COLORS[found.avatarCodigo] || useGameStore.getState().avatarColor)
 
         // Load balance
         try {

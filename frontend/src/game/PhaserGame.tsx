@@ -29,11 +29,6 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
   const gameRef = useRef<Phaser.Game | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Prefer persisted avatar from authStore, fall back to props or random
-  const persistedCodigo = useAuthStore.getState().avatarCodigo
-  const persistedColor = useAuthStore.getState().avatarColor
-  const fallbackColor = useGameStore.getState().avatarColor
-
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return
 
@@ -42,6 +37,7 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
 
     const initialCodigo = authState.avatarCodigo || avatarCodigo
     const initialColor = authState.avatarColor || gameState.avatarColor
+    const hasExistingAvatar = !!initialCodigo && !!initialColor
 
     const { w, h } = getGameSize()
 
@@ -80,7 +76,12 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
     gameRef.current = game
 
     game.events.once('ready', () => {
-      game.scene.start('CharacterSelectScene', sceneData)
+      if (hasExistingAvatar) {
+        // Skip character select — go straight to game
+        game.scene.start('GameScene', sceneData)
+      } else {
+        game.scene.start('CharacterSelectScene', sceneData)
+      }
     })
 
     const handleExit = () => onExit()
