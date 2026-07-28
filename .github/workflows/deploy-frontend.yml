@@ -1,11 +1,10 @@
-name: Deploy Frontend to GitHub Pages
+name: Deploy Vue to GitHub Pages
 
 on:
   push:
-    branches: [develop]
-    paths:
-      - 'pequenos-sanos-frontend/**'
-  workflow_dispatch:
+    branches:
+      - main
+      - develop
 
 permissions:
   contents: read
@@ -19,24 +18,23 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: pequenos-sanos-frontend
+
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
-          cache-dependency-path: pequenos-sanos-frontend/pnpm-lock.yaml
+          cache: npm
+          cache-dependency-path: pequenos-sanos-frontend/package-lock.json
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: npm ci
+
+      - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -44,10 +42,13 @@ jobs:
 
   deploy:
     needs: build
+
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
