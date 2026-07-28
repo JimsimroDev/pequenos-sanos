@@ -49,8 +49,9 @@ public class GameSessionHandler {
      */
     @MessageMapping("/mover")
     public void moverAvatar(DatosMovimientoAvatar movimiento) {
-        log.debug("Avatar move: perfilId={} x={} y={} dir={}",
-                movimiento.perfilId(), movimiento.x(), movimiento.y(), movimiento.direccion());
+        log.debug("Avatar move: perfilId={} x={} y={} dir={} codigo={}",
+                movimiento.perfilId(), movimiento.x(), movimiento.y(),
+                movimiento.direccion(), movimiento.avatarCodigo());
 
         final var state = new AvatarState(
                 movimiento.perfilId(),
@@ -58,7 +59,8 @@ public class GameSessionHandler {
                 movimiento.x(),
                 movimiento.y(),
                 movimiento.direccion(),
-                movimiento.color() != null ? movimiento.color() : "#10b981");
+                movimiento.color() != null ? movimiento.color() : "#10b981",
+                movimiento.avatarCodigo() != null ? movimiento.avatarCodigo() : "");
 
         gameStateStore.updateAvatar(state);
     }
