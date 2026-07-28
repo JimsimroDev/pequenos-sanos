@@ -13,7 +13,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
-    @Value("${cors-settings.url:*}")
+    @Value("${cors-settings.url}")
     private String urlCors;
 
     /**
