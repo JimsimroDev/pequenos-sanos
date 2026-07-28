@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Fluid base font: 14px on mobile, up to 16px on desktop */
+    font-size: clamp(14px, 1.5vw, 16px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-green-50 to-blue-50 min-h-screen;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+/* ── Game container ─────────────────────────────────────────── */
+#game-container {
+  width: 100%;
+  max-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game-container canvas {
+  display: block;
+  /* Fill available space while respecting Phaser's FIT scale mode */
+  max-width: 100%;
+  max-height: calc(100vh - 56px); /* subtract HUD height */
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ── HUD ────────────────────────────────────────────────────── */
+.hud-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+}
+
+/* On very small screens collapse the timer label */
+@media (max-width: 400px) {
+  .hud-timer-label {
+    display: none;
+  }
+}
+
+/* ── Responsive page containers ────────────────────────────── */
+.page-center {
+  min-height: 100svh; /* use svh for mobile browsers */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 28rem; /* 448px */
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  padding: clamp(1.25rem, 5vw, 2rem);
+}
+
+/* ── Dashboard grid ─────────────────────────────────────────── */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.bounce-in {
+  animation: bounce-in 0.35s ease forwards;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.float {
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.coin-spin {
+  animation: spin-slow 1s linear infinite;
+}
