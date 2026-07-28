@@ -49,16 +49,16 @@ management:
       exposure:
         include: health,info
       cors:
-        allowed-origins: ${URL_CORS_PERMISSION:*}
+        allowed-origins: ${URL_CORS_PERMISSION:http://localhost:3000}
         allowed-methods: "GET,OPTIONS"
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 cors-settings:
-  url: ${URL_CORS_PERMISSION:*}
+  url: ${URL_CORS_PERMISSION}
 
 # ─── Project info (populated by Maven filtering) ──────────────────────────────
 info:
   application:
-    groupId: '@project.groupId@'
-    artifactId: '@project.artifactId@'
-    version: '@project.version@'
+    groupId: "@project.groupId@"
+    artifactId: "@project.artifactId@"
+    version: "@project.version@"
