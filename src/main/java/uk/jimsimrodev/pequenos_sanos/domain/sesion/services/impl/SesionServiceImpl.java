@@ -15,7 +15,8 @@ import java.time.LocalDate;
 
 /**
  * Implementation of game session lifecycle management.
- * Validates daily screen time limits and registers timers in the in-memory engine.
+ * Validates daily screen time limits and registers timers in the in-memory
+ * engine.
  */
 @Service
 public class SesionServiceImpl implements ISesionService {
@@ -59,10 +60,14 @@ public class SesionServiceImpl implements ISesionService {
         if (sesionExistente.isPresent()) {
             final var sesion = sesionExistente.get();
 
-            // If session is still open (active), reject
+            // If session is still open (active), return it so the client can resume
             if (sesion.getFin() == null) {
-                return Result.error(CodigosError.SESION_ACTIVA,
-                        "Ya existe una sesión activa para este perfil hoy");
+                final short jugados = sesion.getMinutosJugados();
+                final short restantes = (short) Math.max(0, limite - jugados);
+                // Re-register timer in case the server restarted
+                gameStateStore.registerTimer(perfilId, restantes * 60);
+                return Result.success(new DatosRespuestaSesion(
+                        sesion.getId(), perfilId, jugados, limite, restantes, "ACTIVA"));
             }
 
             // If session is closed and time was exhausted, reject
@@ -90,8 +95,7 @@ public class SesionServiceImpl implements ISesionService {
                 minutosJugadosHoy,
                 limite,
                 restantes,
-                "ACTIVA"
-        );
+                "ACTIVA");
 
         return Result.success(response);
     }
