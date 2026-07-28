@@ -34,3 +34,5 @@ build/
 
 ### Docker secrets — never commit real .env ###
 /.env
+# Local AI runtime state
+.atl/
