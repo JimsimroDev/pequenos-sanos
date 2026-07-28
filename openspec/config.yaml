@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  Project: pequenos-sanos — Gamified nutrition platform for children aged 2-4
+  Stack: Java 21, Spring Boot 3.4.3, PostgreSQL 15, Flyway, Spring Security + JWT (JJWT 0.12.6)
+  Architecture: Package by Domain (auth, perfil, alimento, consumo, recompensa, sesion)
+  API: REST with SpringDoc OpenAPI + WebSocket for game sessions
+  Testing: JUnit 5, Mockito, @WebMvcTest, @DataJpaTest, H2 in-memory for tests
+  Build: Maven (mvnw), Docker Compose (backend on port 5002)
+  Frontend: NEW — React 18 + TypeScript + Vite + Phaser 3 (to be created, port 3000)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Frontend proposals must define the Phaser 3 game architecture separately from React shell
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Backend specs reference existing domain boundaries (auth, perfil, alimento, consumo, recompensa, sesion)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Frontend design must define component hierarchy and game scene structure
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Separate backend and frontend task tracks
+  apply:
+    guidelines:
+      - Follow existing code patterns (Package by Domain, Result<T>, Datos* DTOs)
+      - Frontend must follow atomic design and container-presentational pattern
+    tdd: true
+    test_command: "./mvnw test"
+  verify:
+    test_command: "./mvnw test"
+    build_command: "./mvnw package -DskipTests"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
