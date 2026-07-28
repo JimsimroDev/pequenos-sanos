@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: '/pequenos-sanos-frontend/',   // relative base — works on any GitHub Pages subpath
+  base: mode === 'production' ? '/pequenos-sanos/' : '/',
   server: {
     port: 3000,
   },
@@ -11,4 +11,4 @@ export default defineConfig({
     // sockjs-client uses Node's `global` — polyfill it for the browser
     global: 'globalThis',
   },
-})
+}))
