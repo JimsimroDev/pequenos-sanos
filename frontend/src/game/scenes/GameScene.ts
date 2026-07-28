@@ -4,6 +4,7 @@ import { alimentoService, AlimentoResponse, SUPERPODERS } from '../../api/alimen
 import { consumoService } from '../../api/consumoService'
 import { pendingConsumos } from '../../api/pendingConsumos'
 import { useGameStore } from '../../store/gameStore'
+import { soundManager } from '../SoundManager'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -133,12 +134,12 @@ export class GameScene extends Phaser.Scene {
     const cy = (MAP_ROWS * TILE) / 2
     const colorHex = parseInt(this.sceneData.avatarColor.replace('#', ''), 16)
 
-    // Avatar emoji based on selected character
-    const AVATAR_EMOJIS: Record<string, string> = {
+    // Avatar emoji based on selected MLP pony character
+    const PONY_EMOJIS: Record<string, string> = {
+      TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
       EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
-      ARTIST: '🎨', SUPERHERO: '🦸',
     }
-    const avatarEmoji = AVATAR_EMOJIS[this.sceneData.avatarCodigo] || '😊'
+    const avatarEmoji = PONY_EMOJIS[this.sceneData.avatarCodigo] || '🦄'
 
     this.playerBody = this.add.circle(0, 0, 20, colorHex)
     this.playerBody.setStrokeStyle(3, 0xffffff)
@@ -268,6 +269,42 @@ export class GameScene extends Phaser.Scene {
     return map[categoria] || '🍽️'
   }
 
+  /** Returns a random fun message based on food category */
+  private getFunMessage(categoria: string, nombre: string): string {
+    const mensajes: Record<string, string[]> = {
+      FRUTA: [
+        `${nombre} te da alas para volar! 🕊️`,
+        `${nombre} tiene vitamina C para que no te enfermes 💪`,
+        `Mmm... ${nombre} es como un caramelo natural 🍬`,
+        `Una ${nombre} al día mantiene al doctor en la lejanía 🏥`,
+        `${nombre} tiene antioxidantes que cuidan tu corazón ❤️`,
+      ],
+      VERDURA: [
+        `${nombre} te da un escudo verde protector! 🛡️`,
+        `Las verduras como ${nombre} te hacen crecer fuerte 🌱`,
+        `${nombre} tiene calcio para tus huesos 🦴`,
+        `Come ${nombre} y tus músculos te lo agradecerán 💪`,
+        `${nombre} tiene fibra para que tu pancita feliz 😊`,
+      ],
+      PROTEINA: [
+        `${nombre} construye tus músculos! 🏋️`,
+        `La proteína de ${nombre} te da súper fuerza 💪`,
+        `${nombre} te ayuda a crecer alto como un árbol 🌳`,
+        `Con ${nombre} tendrás energía para jugar todo el día ⚡`,
+        `${nombre} repara tus tejidos y te hace fuerte 🦸`,
+      ],
+      CEREAL: [
+        `${nombre} alimenta tu cerebro! 🧠`,
+        `Los carbohidratos de ${nombre} son tu gasolina ⛽`,
+        `${nombre} te da energía duradera como una batería 🔋`,
+        `Come ${nombre} para pensar más rápido en clase 📚`,
+        `${nombre} tiene fibra que limpia tu cuerpo 🧹`,
+      ],
+    }
+    const opts = mensajes[categoria] || [`${nombre} es súper nutritivo! 🌟`]
+    return Phaser.Utils.Array.GetRandom(opts)
+  }
+
   private setupWebSocket() {
     // Process incoming map broadcasts
     gameSocket.onMapa((estado) => {
@@ -354,6 +391,8 @@ export class GameScene extends Phaser.Scene {
     this.powerText.setText(`${pwr.emoji} ${pwr.nombre} activo! (30s)`).setVisible(true)
     this.powerOverlay.setFillStyle(parseInt(pwr.color.replace('#', ''), 16), 0.4)
 
+    soundManager.playPowerUp()
+
     if (this.powerTimer) this.powerTimer.remove()
     this.powerTimer = this.time.delayedCall(SUPERPODER_DURATION, () => {
       this.activePower = null
@@ -370,12 +409,30 @@ export class GameScene extends Phaser.Scene {
     this.dialogVisible = true
 
     const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
+    const catColor = pwr?.color ? parseInt(pwr.color.replace('#', ''), 16) : 0x10b981
 
+    // Dynamic banner — food category color
+    this.dialogBg.setStrokeStyle(3, catColor)
     this.dialogTitleText.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
-    this.dialogBodyText.setText(alimento.descripcion || 'Un alimento muy nutritivo y delicioso.')
+
+    // Varied dialogue — use API descripcion + fun message
+    const funMsg = this.getFunMessage(alimento.categoria, alimento.nombre)
+    const desc = alimento.descripcion || 'Un alimento muy nutritivo y delicioso.'
+    this.dialogBodyText.setText(`${desc}\n\n${funMsg}`)
+
+    // Benefits with category-colored background
+    this.dialogBenefitsBg.setFillStyle(catColor, 0.2)
+    this.dialogBenefitsBg.setStrokeStyle(1, catColor)
     this.dialogBenefitsText.setText(
       `${pwr?.emoji || '✨'} Superpoder: ${pwr?.nombre || '?'}\n${pwr?.descripcion || ''}`
     )
+
+    // Category-colored close button
+    this.dialogCloseBtn.setFillStyle(catColor)
+    this.dialogCloseBtn.setStrokeStyle(2, 0x000000, 0.2)
+
+    // Sound
+    soundManager.playCollect()
 
     // Show all dialog elements
     this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true))
@@ -400,6 +457,7 @@ export class GameScene extends Phaser.Scene {
   private closeDialog() {
     this.dialogVisible = false
     this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false))
+    soundManager.playClick()
   }
 
   private async collectFood(food: FoodSprite) {
@@ -409,7 +467,8 @@ export class GameScene extends Phaser.Scene {
     // Immediately notify all other clients via WebSocket
     gameSocket.sendAlimentoComido(food.alimento.id, this.sceneData.perfilId, this.sceneData.nombrePerfil)
 
-    // Collect animation
+    // Munch sound + collect animation
+    soundManager.playMunch()
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 

@@ -4,6 +4,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene'
 import { GameScene } from './scenes/GameScene'
 import { EndScene } from './scenes/EndScene'
 import { useGameStore } from '../store/gameStore'
+import { useAuthStore } from '../store/authStore'
 
 interface PhaserGameProps {
   perfilId: number
@@ -27,20 +28,33 @@ function getGameSize() {
 export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExit }: PhaserGameProps) {
   const gameRef = useRef<Phaser.Game | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const avatarColor = useGameStore.getState().avatarColor
-  const setAvatarColor = useGameStore.getState().setAvatarColor
+
+  // Prefer persisted avatar from authStore, fall back to props or random
+  const persistedCodigo = useAuthStore.getState().avatarCodigo
+  const persistedColor = useAuthStore.getState().avatarColor
+  const fallbackColor = useGameStore.getState().avatarColor
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return
+
+    const authState = useAuthStore.getState()
+    const gameState = useGameStore.getState()
+
+    const initialCodigo = authState.avatarCodigo || avatarCodigo
+    const initialColor = authState.avatarColor || gameState.avatarColor
 
     const { w, h } = getGameSize()
 
     const sceneData = {
       perfilId,
       nombrePerfil,
-      avatarCodigo,
-      avatarColor,
-      onComplete: (_key: string, color: string) => setAvatarColor(color),
+      avatarCodigo: initialCodigo,
+      avatarColor: initialColor,
+      onComplete: (key: string, color: string) => {
+        useGameStore.getState().setAvatarColor(color)
+        useAuthStore.getState().setAvatarCodigo(key)
+        useAuthStore.getState().setAvatarColor(color)
+      },
     }
 
     const config: Phaser.Types.Core.GameConfig = {

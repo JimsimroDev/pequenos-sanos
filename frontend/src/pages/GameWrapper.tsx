@@ -7,6 +7,7 @@ import { consumoService } from '../api/consumoService'
 import { pendingConsumos } from '../api/pendingConsumos'
 import { gameSocket } from '../websocket/gameSocket'
 import { useGameStore } from '../store/gameStore'
+import { useAuthStore } from '../store/authStore'
 import HUD from '../components/HUD'
 import PhaserGame from '../game/PhaserGame'
 
@@ -28,6 +29,8 @@ export default function GameWrapper() {
   const setSaldo = useGameStore((s) => s.setSaldo)
   const setTimer = useGameStore((s) => s.setTimer)
   const resetGame = useGameStore((s) => s.resetGame)
+  const setAvatarCodigo = useAuthStore((s) => s.setAvatarCodigo)
+  const setAvatarColor = useAuthStore((s) => s.setAvatarColor)
 
   // Ref to handleExit so the interval can call it without stale closure
   const handleExitRef = useRef<() => void>(() => {})
@@ -102,6 +105,9 @@ export default function GameWrapper() {
         if (!found) { setError('Perfil no encontrado'); setLoading(false); return }
         setPerfil(found)
         setPerfilId(found.id, found.nombre)
+        // Persist avatar selection for next session
+        setAvatarCodigo(found.avatarCodigo)
+        setAvatarColor(useGameStore.getState().avatarColor)
 
         // Load balance
         try {
