@@ -50,7 +50,7 @@ public interface SesionResource {
     })
     @PostMapping("/iniciar/{perfilId}")
     @PreAuthorize("hasAnyRole('PADRE', 'NINO')")
-    ResponseEntity<DatosRespuestaSesion> iniciar(
+    ResponseEntity<?> iniciar(
             @Parameter(in = ParameterIn.PATH, name = "perfilId",
                     description = "ID del perfil infantil", example = "1")
             @PathVariable Long perfilId);

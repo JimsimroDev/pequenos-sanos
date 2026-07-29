@@ -1,11 +1,12 @@
 import Phaser from 'phaser'
 import { COLORES_AVATARES } from '../../store/gameStore'
+import { soundManager } from '../SoundManager'
 
 const PERSONAJES = [
-  { key: 'EXPLORER', emoji: '🧭', nombre: 'Explorador', descripcion: 'Descubre nuevos alimentos' },
-  { key: 'CHEF', emoji: '👨‍🍳', nombre: 'Chef', descripcion: 'Conoce recetas saludables' },
-  { key: 'ATHLETE', emoji: '🏃', nombre: 'Atleta', descripcion: 'Corre más rápido con energía' },
-  { key: 'SCIENTIST', emoji: '🔬', nombre: 'Científico', descripcion: 'Estudia los nutrientes' },
+  { key: 'TWILIGHT', emoji: '🦄', nombre: 'Twilight Sparkle', frase: '¡La magia de la amistad y las frutas!', color: '#9333ea' },
+  { key: 'RAINBOW', emoji: '🌈', nombre: 'Rainbow Dash', frase: '¡Velocidad y verduras para volar alto!', color: '#2563eb' },
+  { key: 'FLUTTERSHY', emoji: '🦋', nombre: 'Fluttershy', frase: 'Las proteínas nos hacen fuertes y suaves', color: '#ec4899' },
+  { key: 'PINKIE', emoji: '🎉', nombre: 'Pinkie Pie', frase: '¡Fiestas con cereales y mucha risa!', color: '#db2777' },
 ]
 
 export interface CharacterSelectData {
@@ -13,6 +14,7 @@ export interface CharacterSelectData {
   nombrePerfil: string
   avatarCodigo: string
   avatarColor: string
+  settingsMode?: boolean
   onComplete: (key: string, color: string) => void
 }
 
@@ -55,40 +57,53 @@ export class CharacterSelectScene extends Phaser.Scene {
       )
     }
 
-    this.add.text(width / 2, 50, '✨ Elige tu personaje', {
+    const isSettings = this.sceneData.settingsMode
+    this.add.text(width / 2, 50, isSettings ? '⚙️ Cambiar personaje' : '✨ Elige tu personaje', {
       fontSize: '28px',
       color: '#f0fdf4',
       fontFamily: 'Arial',
       fontStyle: 'bold',
     }).setOrigin(0.5)
 
-    this.add.text(width / 2, 85, `Hola, ${this.sceneData.nombrePerfil}! ¿Quién quieres ser hoy?`, {
-      fontSize: '15px',
-      color: '#86efac',
-      fontFamily: 'Arial',
-    }).setOrigin(0.5)
+    if (isSettings) {
+      this.add.text(width / 2, 85, 'Selecciona un nuevo personaje y color', {
+        fontSize: '14px',
+        color: '#94a3b8',
+        fontFamily: 'Arial',
+      }).setOrigin(0.5)
+    } else {
+      this.add.text(width / 2, 85, `Hola, ${this.sceneData.nombrePerfil}! ¿Quién quieres ser hoy?`, {
+        fontSize: '15px',
+        color: '#86efac',
+        fontFamily: 'Arial',
+      }).setOrigin(0.5)
+    }
 
-    // Character cards
-    const cardW = 150, cardH = 180
+    // Character cards — MLP ponies
+    const cardW = 150, cardH = 195
     const startX = width / 2 - ((PERSONAJES.length - 1) * (cardW + 20)) / 2
     this.charCards = PERSONAJES.map((p, i) => {
       const x = startX + i * (cardW + 20)
-      const y = height / 2 - 30
+      const y = height / 2 - 40
+      const ponyColor = parseInt(p.color.replace('#', ''), 16)
 
       const container = this.add.container(x, y)
 
       const bg = this.add.rectangle(0, 0, cardW, cardH, i === this.selectedChar ? 0x065f46 : 0x1e293b, 1)
-      bg.setStrokeStyle(3, i === this.selectedChar ? 0x10b981 : 0x334155)
+      bg.setStrokeStyle(3, i === this.selectedChar ? ponyColor : 0x334155)
 
-      const emojiText = this.add.text(0, -50, p.emoji, { fontSize: '48px' }).setOrigin(0.5)
-      const nameText = this.add.text(0, 10, p.nombre, {
-        fontSize: '14px', color: '#f0fdf4', fontFamily: 'Arial', fontStyle: 'bold',
+      // Colored circle with pony emoji
+      const ponyCircle = this.add.circle(0, -50, 28, ponyColor)
+      ponyCircle.setStrokeStyle(3, 0xffffff)
+      const emojiText = this.add.text(0, -50, p.emoji, { fontSize: '24px' }).setOrigin(0.5)
+      const nameText = this.add.text(0, -10, p.nombre, {
+        fontSize: '13px', color: '#f0fdf4', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5)
-      const descText = this.add.text(0, 35, p.descripcion, {
-        fontSize: '11px', color: '#94a3b8', fontFamily: 'Arial', wordWrap: { width: cardW - 20 }, align: 'center',
+      const fraseText = this.add.text(0, 25, p.frase, {
+        fontSize: '10px', color: '#cbd5e1', fontFamily: 'Arial', wordWrap: { width: cardW - 16 }, align: 'center',
       }).setOrigin(0.5)
 
-      container.add([bg, emojiText, nameText, descText])
+      container.add([bg, ponyCircle, emojiText, nameText, fraseText])
       container.setSize(cardW, cardH)
       container.setInteractive()
       container.on('pointerdown', () => this.selectChar(i))
@@ -113,12 +128,13 @@ export class CharacterSelectScene extends Phaser.Scene {
       return dot
     })
 
-    // Play button
+    // Play / confirm button
+    const btnLabel = isSettings ? '✅ ¡Listo!' : '🎮 ¡Comenzar aventura!'
     const playBtn = this.add.rectangle(width / 2, height - 60, 220, 50, 0x10b981)
     playBtn.setStrokeStyle(2, 0x065f46)
     playBtn.setInteractive({ useHandCursor: true })
 
-    const playText = this.add.text(width / 2, height - 60, '🎮 ¡Comenzar aventura!', {
+    const playText = this.add.text(width / 2, height - 60, btnLabel, {
       fontSize: '16px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5)
 
@@ -131,11 +147,12 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   private selectChar(idx: number) {
     this.selectedChar = idx
+    const ponyColor = parseInt(PERSONAJES[idx].color.replace('#', ''), 16)
     this.charCards.forEach((card, i) => {
       const bg = card.list[0] as Phaser.GameObjects.Rectangle
       if (i === idx) {
         bg.setFillStyle(0x065f46)
-        bg.setStrokeStyle(3, 0x10b981)
+        bg.setStrokeStyle(3, ponyColor)
         this.tweens.add({ targets: card, scaleX: 1.05, scaleY: 1.05, duration: 150, yoyo: true })
       } else {
         bg.setFillStyle(0x1e293b)
@@ -154,7 +171,14 @@ export class CharacterSelectScene extends Phaser.Scene {
   private startGame() {
     const char = PERSONAJES[this.selectedChar]
     const color = COLORES_AVATARES[this.selectedColor]
+    soundManager.playClick()
     this.sceneData.onComplete(char.key, color)
-    this.scene.start('GameScene', { ...this.sceneData, avatarCodigo: char.key, avatarColor: color })
+
+    if (this.sceneData.settingsMode) {
+      // Stop ourselves — GameScene handles the resume
+      this.scene.stop()
+    } else {
+      this.scene.start('GameScene', { ...this.sceneData, avatarCodigo: char.key, avatarColor: color })
+    }
   }
 }

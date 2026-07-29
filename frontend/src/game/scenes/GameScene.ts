@@ -4,6 +4,9 @@ import { alimentoService, AlimentoResponse, SUPERPODERS } from '../../api/alimen
 import { consumoService } from '../../api/consumoService'
 import { pendingConsumos } from '../../api/pendingConsumos'
 import { useGameStore } from '../../store/gameStore'
+import { useAuthStore } from '../../store/authStore'
+import { soundManager } from '../SoundManager'
+import { MapRenderer } from '../map/MapRenderer'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -11,6 +14,27 @@ const MAP_ROWS = 20
 const PLAYER_SPEED = 160
 const FOOD_COUNT = 12
 const SUPERPODER_DURATION = 30000
+
+/** Map avatar codes to their pony emoji and color */
+const PONY_EMOJIS: Record<string, string> = {
+  TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
+  EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
+}
+const PONY_COLORS: Record<string, string> = {
+  TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
+  EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
+}
+
+/** Derive a pony emoji from color or avatarCodigo */
+function getPonyEmoji(avatarCodigo?: string, color?: string): string {
+  if (avatarCodigo && PONY_EMOJIS[avatarCodigo]) return PONY_EMOJIS[avatarCodigo]
+  if (color) {
+    // Fallback: map color back to pony
+    const match = Object.entries(PONY_COLORS).find(([, c]) => c === color)
+    if (match) return PONY_EMOJIS[match[0]] || '🦄'
+  }
+  return '🦄'
+}
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
@@ -61,7 +85,10 @@ export class GameScene extends Phaser.Scene {
   private dialogVisible = false
   private score = 0
   private scoreText!: Phaser.GameObjects.Text
-  private tileMap: Phaser.GameObjects.Rectangle[][] = []
+  // Settings / pause
+  private settingsBtn!: Phaser.GameObjects.Text
+  private isPaused = false
+  private pauseOverlay!: Phaser.GameObjects.Rectangle
 
   constructor() {
     super({ key: 'GameScene' })
@@ -77,55 +104,15 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, mapW, mapH)
     this.physics.world.setBounds(0, 0, mapW, mapH)
 
-    this.drawTileMap(mapW, mapH)
-    this.createDecorations(mapW, mapH)
+    MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
     this.createHUD()
+    this.createSettingsUI()
     this.createPowerOverlay()
     this.createDialogBox()
     this.spawnFoods()
     this.setupWebSocket()
-  }
-
-  private drawTileMap(mapW: number, mapH: number) {
-    const TILE_COLORS = [0x86efac, 0x6ee7b7, 0x4ade80, 0xa7f3d0]
-    for (let r = 0; r < MAP_ROWS; r++) {
-      this.tileMap[r] = []
-      for (let c = 0; c < MAP_COLS; c++) {
-        const color = TILE_COLORS[(r + c) % TILE_COLORS.length]
-        const tile = this.add.rectangle(c * TILE + TILE / 2, r * TILE + TILE / 2, TILE - 1, TILE - 1, color)
-        this.tileMap[r][c] = tile
-      }
-    }
-    // Paths (lighter stripes)
-    for (let c = 0; c < MAP_COLS; c++) {
-      this.add.rectangle(c * TILE + TILE / 2, MAP_ROWS * TILE / 2, TILE - 1, TILE - 1, 0xfef9c3)
-    }
-    for (let r = 0; r < MAP_ROWS; r++) {
-      this.add.rectangle(MAP_COLS * TILE / 2, r * TILE + TILE / 2, TILE - 1, TILE - 1, 0xfef9c3)
-    }
-  }
-
-  private createDecorations(mapW: number, mapH: number) {
-    const treeEmojis = ['🌳', '🌲', '🌴', '🌵']
-    for (let i = 0; i < 18; i++) {
-      const x = Phaser.Math.Between(TILE, mapW - TILE)
-      const y = Phaser.Math.Between(TILE, mapH - TILE)
-      this.add.text(x, y, Phaser.Utils.Array.GetRandom(treeEmojis), { fontSize: '28px' }).setOrigin(0.5)
-    }
-    // Zone signs
-    const zones = [
-      { x: 200, y: 150, label: '🍎 Zona Frutas' },
-      { x: MAP_COLS * TILE - 200, y: 150, label: '🥦 Zona Verduras' },
-      { x: 200, y: MAP_ROWS * TILE - 150, label: '🍗 Zona Proteínas' },
-      { x: MAP_COLS * TILE - 200, y: MAP_ROWS * TILE - 150, label: '🌾 Zona Cereales' },
-    ]
-    zones.forEach(({ x, y, label }) => {
-      const bg = this.add.rectangle(x, y, 160, 36, 0xfffbeb, 0.9)
-      bg.setStrokeStyle(2, 0xf59e0b)
-      this.add.text(x, y, label, { fontSize: '13px', color: '#78350f', fontFamily: 'Arial' }).setOrigin(0.5)
-    })
   }
 
   private createPlayer() {
@@ -133,12 +120,8 @@ export class GameScene extends Phaser.Scene {
     const cy = (MAP_ROWS * TILE) / 2
     const colorHex = parseInt(this.sceneData.avatarColor.replace('#', ''), 16)
 
-    // Avatar emoji based on selected character
-    const AVATAR_EMOJIS: Record<string, string> = {
-      EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
-      ARTIST: '🎨', SUPERHERO: '🦸',
-    }
-    const avatarEmoji = AVATAR_EMOJIS[this.sceneData.avatarCodigo] || '😊'
+    // Avatar emoji based on selected MLP pony character
+    const avatarEmoji = getPonyEmoji(this.sceneData.avatarCodigo, this.sceneData.avatarColor)
 
     this.playerBody = this.add.circle(0, 0, 20, colorHex)
     this.playerBody.setStrokeStyle(3, 0xffffff)
@@ -149,7 +132,7 @@ export class GameScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel])
+    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel]).setDepth(5)
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
   }
 
@@ -168,6 +151,78 @@ export class GameScene extends Phaser.Scene {
       fontSize: '20px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#065f46', strokeThickness: 4,
     }).setScrollFactor(0).setDepth(100)
+  }
+
+  /** Creates the settings gear button and pause overlay */
+  private createSettingsUI() {
+    // Gear button in top-right corner
+    this.settingsBtn = this.add.text(this.scale.width - 20, 16, '⚙️', {
+      fontSize: '24px',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(110)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.openSettings())
+      .on('pointerover', () => this.settingsBtn.setAlpha(0.7))
+      .on('pointerout', () => this.settingsBtn.setAlpha(1))
+
+    // Pause overlay — darkens the screen
+    this.pauseOverlay = this.add.rectangle(
+      this.scale.width / 2, this.scale.height / 2,
+      this.scale.width, this.scale.height,
+      0x000000, 0
+    ).setScrollFactor(0).setDepth(190).setVisible(false)
+  }
+
+  /** Opens the character select in settings mode */
+  private openSettings() {
+    if (this.isPaused) return
+    this.isPaused = true
+
+    // Dim overlay with animation
+    this.pauseOverlay.setVisible(true).setAlpha(0)
+    this.tweens.add({ targets: this.pauseOverlay, alpha: 0.5, duration: 300 })
+
+    // Launch CharacterSelectScene on top
+    this.scene.launch('CharacterSelectScene', {
+      perfilId: this.sceneData.perfilId,
+      nombrePerfil: this.sceneData.nombrePerfil,
+      avatarCodigo: this.sceneData.avatarCodigo,
+      avatarColor: this.sceneData.avatarColor,
+      settingsMode: true,
+      onComplete: (key: string, color: string) => {
+        this.updateAvatar(key, color)
+        this.scene.stop('CharacterSelectScene')
+        // Remove dim overlay
+        this.tweens.add({
+          targets: this.pauseOverlay, alpha: 0, duration: 200,
+          onComplete: () => this.pauseOverlay.setVisible(false),
+        })
+        this.isPaused = false
+      },
+    })
+  }
+
+  /** Updates the local player avatar and broadcasts to other players */
+  private updateAvatar(key: string, color: string) {
+    // Update scene data
+    this.sceneData.avatarCodigo = key
+    this.sceneData.avatarColor = color
+
+    // Persist
+    useAuthStore.getState().setAvatarCodigo(key)
+    useAuthStore.getState().setAvatarColor(color)
+    useGameStore.getState().setAvatarColor(color)
+
+    // Recreate player visuals
+    const oldX = this.player.x
+    const oldY = this.player.y
+    this.player.destroy()
+    this.createPlayer()
+    this.player.setPosition(oldX, oldY)
+
+    // Broadcast avatar change to other players via WS
+    gameSocket.sendAvatarChange(this.sceneData.perfilId, key, color)
+
+    soundManager.playClick()
   }
 
   private createPowerOverlay() {
@@ -249,7 +304,7 @@ export class GameScene extends Phaser.Scene {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, emoji, label])
+        const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
 
         this.tweens.add({ targets: glow, scaleX: 1.3, scaleY: 1.3, alpha: 0.1, duration: 1000, yoyo: true, repeat: -1 })
         this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 600 })
@@ -266,6 +321,42 @@ export class GameScene extends Phaser.Scene {
       FRUTA: '🍎', VERDURA: '🥦', PROTEINA: '🍗', CEREAL: '🌾',
     }
     return map[categoria] || '🍽️'
+  }
+
+  /** Returns a random fun message based on food category */
+  private getFunMessage(categoria: string, nombre: string): string {
+    const mensajes: Record<string, string[]> = {
+      FRUTA: [
+        `${nombre} te da alas para volar! 🕊️`,
+        `${nombre} tiene vitamina C para que no te enfermes 💪`,
+        `Mmm... ${nombre} es como un caramelo natural 🍬`,
+        `Una ${nombre} al día mantiene al doctor en la lejanía 🏥`,
+        `${nombre} tiene antioxidantes que cuidan tu corazón ❤️`,
+      ],
+      VERDURA: [
+        `${nombre} te da un escudo verde protector! 🛡️`,
+        `Las verduras como ${nombre} te hacen crecer fuerte 🌱`,
+        `${nombre} tiene calcio para tus huesos 🦴`,
+        `Come ${nombre} y tus músculos te lo agradecerán 💪`,
+        `${nombre} tiene fibra para que tu pancita feliz 😊`,
+      ],
+      PROTEINA: [
+        `${nombre} construye tus músculos! 🏋️`,
+        `La proteína de ${nombre} te da súper fuerza 💪`,
+        `${nombre} te ayuda a crecer alto como un árbol 🌳`,
+        `Con ${nombre} tendrás energía para jugar todo el día ⚡`,
+        `${nombre} repara tus tejidos y te hace fuerte 🦸`,
+      ],
+      CEREAL: [
+        `${nombre} alimenta tu cerebro! 🧠`,
+        `Los carbohidratos de ${nombre} son tu gasolina ⛽`,
+        `${nombre} te da energía duradera como una batería 🔋`,
+        `Come ${nombre} para pensar más rápido en clase 📚`,
+        `${nombre} tiene fibra que limpia tu cuerpo 🧹`,
+      ],
+    }
+    const opts = mensajes[categoria] || [`${nombre} es súper nutritivo! 🌟`]
+    return Phaser.Utils.Array.GetRandom(opts)
   }
 
   private setupWebSocket() {
@@ -322,25 +413,33 @@ export class GameScene extends Phaser.Scene {
             x: av.x,
             y: av.y,
             color: av.color,
+            avatarCodigo: av.avatarCodigo,
           })
         })
       },
     })
   }
 
-  private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string }) {
+  private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string; avatarCodigo?: string }) {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
       this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
+      // Update avatar emoji if it changed
+      const existingFace = op.container.list[1] as Phaser.GameObjects.Text
+      if (existingFace && av.avatarCodigo) {
+        const newEmoji = getPonyEmoji(av.avatarCodigo, av.color)
+        if (existingFace.text !== newEmoji) existingFace.setText(newEmoji)
+      }
     } else {
       const body = this.add.circle(0, 0, 18, colorHex)
       body.setStrokeStyle(2, 0xffffff)
-      const face = this.add.text(0, -2, '😄', { fontSize: '16px' }).setOrigin(0.5)
+      const ponyEmoji = getPonyEmoji(av.avatarCodigo, av.color)
+      const face = this.add.text(0, -2, ponyEmoji, { fontSize: '16px' }).setOrigin(0.5)
       const nameTag = this.add.text(0, 24, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, face, nameTag])
+      const container = this.add.container(av.x, av.y, [body, face, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, { container, nameTag, perfilId: av.perfilId })
     }
   }
@@ -353,6 +452,8 @@ export class GameScene extends Phaser.Scene {
     this.powerOverlay.setVisible(true)
     this.powerText.setText(`${pwr.emoji} ${pwr.nombre} activo! (30s)`).setVisible(true)
     this.powerOverlay.setFillStyle(parseInt(pwr.color.replace('#', ''), 16), 0.4)
+
+    soundManager.playPowerUp()
 
     if (this.powerTimer) this.powerTimer.remove()
     this.powerTimer = this.time.delayedCall(SUPERPODER_DURATION, () => {
@@ -370,12 +471,30 @@ export class GameScene extends Phaser.Scene {
     this.dialogVisible = true
 
     const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
+    const catColor = pwr?.color ? parseInt(pwr.color.replace('#', ''), 16) : 0x10b981
 
+    // Dynamic banner — food category color
+    this.dialogBg.setStrokeStyle(3, catColor)
     this.dialogTitleText.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
-    this.dialogBodyText.setText(alimento.descripcion || 'Un alimento muy nutritivo y delicioso.')
+
+    // Varied dialogue — use API descripcion + fun message
+    const funMsg = this.getFunMessage(alimento.categoria, alimento.nombre)
+    const desc = alimento.descripcion || 'Un alimento muy nutritivo y delicioso.'
+    this.dialogBodyText.setText(`${desc}\n\n${funMsg}`)
+
+    // Benefits with category-colored background
+    this.dialogBenefitsBg.setFillStyle(catColor, 0.2)
+    this.dialogBenefitsBg.setStrokeStyle(1, catColor)
     this.dialogBenefitsText.setText(
       `${pwr?.emoji || '✨'} Superpoder: ${pwr?.nombre || '?'}\n${pwr?.descripcion || ''}`
     )
+
+    // Category-colored close button
+    this.dialogCloseBtn.setFillStyle(catColor)
+    this.dialogCloseBtn.setStrokeStyle(2, 0x000000, 0.2)
+
+    // Sound
+    soundManager.playCollect()
 
     // Show all dialog elements
     this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true))
@@ -400,6 +519,7 @@ export class GameScene extends Phaser.Scene {
   private closeDialog() {
     this.dialogVisible = false
     this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false))
+    soundManager.playClick()
   }
 
   private async collectFood(food: FoodSprite) {
@@ -409,7 +529,8 @@ export class GameScene extends Phaser.Scene {
     // Immediately notify all other clients via WebSocket
     gameSocket.sendAlimentoComido(food.alimento.id, this.sceneData.perfilId, this.sceneData.nombrePerfil)
 
-    // Collect animation
+    // Munch sound + collect animation
+    soundManager.playMunch()
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
@@ -458,7 +579,7 @@ export class GameScene extends Phaser.Scene {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, emoji, label])
+      const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
       this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -467,6 +588,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
+    if (this.isPaused) return // Don't move when settings are open
+
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
     let dx = 0, dy = 0
     let dir = 'idle'

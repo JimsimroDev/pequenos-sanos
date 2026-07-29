@@ -42,6 +42,12 @@ public class PerfilInfantil {
     @Column(name = "screen_time_limit", nullable = false)
     private Short screenTimeLimit = 15;
 
+    @Column(name = "sesiones_extra_hoy", nullable = false)
+    private Short sesionesExtraHoy = 0;
+
+    @Column(name = "sesiones_extra_compradas", nullable = false)
+    private Short sesionesExtraCompradas = 0;
+
     @Column(name = "monedas_saldo", nullable = false)
     private Integer monedasSaldo = 0;
 
@@ -82,6 +88,8 @@ public class PerfilInfantil {
     public Short getEdadAnios() { return edadAnios; }
     public String getAvatarCodigo() { return avatarCodigo; }
     public Short getScreenTimeLimit() { return screenTimeLimit; }
+    public Short getSesionesExtraHoy() { return sesionesExtraHoy; }
+    public Short getSesionesExtraCompradas() { return sesionesExtraCompradas; }
     public Integer getMonedasSaldo() { return monedasSaldo; }
     public Boolean getActivo() { return activo; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -106,6 +114,16 @@ public class PerfilInfantil {
 
     public void setScreenTimeLimit(Short screenTimeLimit) {
         this.screenTimeLimit = screenTimeLimit;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setSesionesExtraHoy(Short sesionesExtraHoy) {
+        this.sesionesExtraHoy = sesionesExtraHoy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setSesionesExtraCompradas(Short sesionesExtraCompradas) {
+        this.sesionesExtraCompradas = sesionesExtraCompradas;
         this.updatedAt = LocalDateTime.now();
     }
 

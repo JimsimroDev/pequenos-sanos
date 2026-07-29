@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useAuthStore } from '../store/authStore'
+
+const PONY_EMOJIS: Record<string, string> = {
+  TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
+  EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
+}
 
 interface HUDProps {
   perfilId: number
@@ -16,6 +22,7 @@ export default function HUD({ perfilId: _perfilId, nombrePerfil, onExit }: HUDPr
   const minutosRestantes = useGameStore((s) => s.minutosRestantes)
   const segundosRestantes = useGameStore((s) => s.segundosRestantes)
   const otrosJugadores = useGameStore((s) => s.otrosJugadores)
+  const avatarCodigo = useAuthStore((s) => s.avatarCodigo)
 
   const [isUrgent, setIsUrgent] = useState(false)
 
@@ -30,8 +37,9 @@ export default function HUD({ perfilId: _perfilId, nombrePerfil, onExit }: HUDPr
     <div className="w-full bg-gray-900 text-white px-2 sm:px-4 py-2 flex items-center justify-between shadow-lg gap-2">
       {/* Left: player info — hide name on very small screens */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500 flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0">
-          {nombrePerfil.charAt(0).toUpperCase()}
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs sm:text-sm flex-shrink-0"
+             title={avatarCodigo || nombrePerfil}>
+          <span className="text-sm sm:text-base">{PONY_EMOJIS[avatarCodigo || ''] || nombrePerfil.charAt(0).toUpperCase()}</span>
         </div>
         <span className="font-semibold text-xs sm:text-sm hidden sm:inline truncate">{nombrePerfil}</span>
         <div className="flex items-center gap-1 bg-yellow-500/20 rounded-lg px-1.5 sm:px-2 py-0.5 flex-shrink-0">

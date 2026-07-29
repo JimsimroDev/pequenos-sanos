@@ -14,6 +14,7 @@ export interface AvatarPosition {
   y: number
   direccion: string
   color: string
+  avatarCodigo?: string
 }
 
 export interface TimerUpdate {
@@ -51,6 +52,7 @@ export const gameSocket = {
 
     const token = useAuthStore.getState().token
     const color = useGameStore.getState().avatarColor
+    const avatarCodigo = useAuthStore.getState().avatarCodigo || undefined
 
     stompClient = new Client({
       webSocketFactory: () => new SockJS(`${BASE_URL}/game`),
@@ -63,7 +65,7 @@ export const gameSocket = {
         stompClient!.subscribe('/topic/mapa/mundo-1', (msg: IMessage) => {
           try {
             const estado: MapaEstado = JSON.parse(msg.body)
-            console.log('[WS] 🗺️ Broadcast recibido. Avatares:', estado.avatares.length, estado.avatares.map(a => `${a.nombre}(${a.perfilId})`))
+            if (import.meta.env.DEV) console.log('[WS] 🗺️ Broadcast recibido. Avatares:', estado.avatares.length, estado.avatares.map(a => `${a.nombre}(${a.perfilId})`))
             useGameStore.getState().setOtrosJugadores(
               estado.avatares.filter((a) => a.perfilId !== perfilId)
             )
@@ -77,7 +79,7 @@ export const gameSocket = {
         stompClient!.subscribe('/topic/alimento/comido', (msg: IMessage) => {
           try {
             const evento: AlimentoComidoEvento = JSON.parse(msg.body)
-            console.log('[WS] 🍎 Alimento comido:', evento)
+            if (import.meta.env.DEV) console.log('[WS] 🍎 Alimento comido:', evento)
             onAlimentoComidoCallback?.(evento)
           } catch { /* ignore */ }
         })
@@ -86,7 +88,7 @@ export const gameSocket = {
         stompClient!.subscribe(`/user/queue/timer`, (msg: IMessage) => {
           try {
             const timer: TimerUpdate = JSON.parse(msg.body)
-            console.log('[WS] ⏱️ Timer update:', timer)
+            if (import.meta.env.DEV) console.log('[WS] ⏱️ Timer update:', timer)
             useGameStore.getState().setTimer(timer.minutosRestantes, timer.segundosRestantes)
             onTimerCallback?.(timer)
           } catch { /* ignore */ }
@@ -94,12 +96,12 @@ export const gameSocket = {
 
         // Subscribe to force logout
         stompClient!.subscribe(`/user/queue/logout`, () => {
-          console.warn('[WS] 🚫 Force logout recibido')
+          if (import.meta.env.DEV) console.warn('[WS] 🚫 Force logout recibido')
           onLogoutCallback?.()
         })
 
         // Send initial position to register on the map — backend listens on /app/mover
-        const initialPayload = { perfilId, nombre: useGameStore.getState().nombrePerfil || '', x: 600, y: 480, direccion: 'idle', color }
+        const initialPayload = { perfilId, nombre: useGameStore.getState().nombrePerfil || '', x: 600, y: 480, direccion: 'idle', color, avatarCodigo }
         console.log('[WS] 📍 Enviando posición inicial:', initialPayload)
         stompClient!.publish({
           destination: '/app/mover',
@@ -122,9 +124,24 @@ export const gameSocket = {
   sendMove(perfilId: number, nombre: string, x: number, y: number, direccion: string) {
     if (!stompClient?.connected) return
     const color = useGameStore.getState().avatarColor
+    const avatarCodigo = useAuthStore.getState().avatarCodigo || undefined
     stompClient.publish({
       destination: '/app/mover',
-      body: JSON.stringify({ perfilId, nombre, x, y, direccion, color }),
+      body: JSON.stringify({ perfilId, nombre, x, y, direccion, color, avatarCodigo }),
+    })
+  },
+
+  sendAvatarChange(perfilId: number, avatarCodigo: string, color: string) {
+    if (!stompClient?.connected) return
+    stompClient.publish({
+      destination: '/app/mover',
+      body: JSON.stringify({
+        perfilId,
+        nombre: useGameStore.getState().nombrePerfil || '',
+        x: 0, y: 0, direccion: 'idle',
+        color,
+        avatarCodigo,
+      }),
     })
   },
 

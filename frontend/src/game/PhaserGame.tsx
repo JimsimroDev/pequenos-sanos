@@ -4,6 +4,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene'
 import { GameScene } from './scenes/GameScene'
 import { EndScene } from './scenes/EndScene'
 import { useGameStore } from '../store/gameStore'
+import { useAuthStore } from '../store/authStore'
 
 interface PhaserGameProps {
   perfilId: number
@@ -27,20 +28,29 @@ function getGameSize() {
 export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExit }: PhaserGameProps) {
   const gameRef = useRef<Phaser.Game | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const avatarColor = useGameStore.getState().avatarColor
-  const setAvatarColor = useGameStore.getState().setAvatarColor
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return
+
+    const authState = useAuthStore.getState()
+    const gameState = useGameStore.getState()
+
+    const initialCodigo = authState.avatarCodigo || avatarCodigo
+    const initialColor = authState.avatarColor || gameState.avatarColor
+    const hasExistingAvatar = !!initialCodigo && !!initialColor
 
     const { w, h } = getGameSize()
 
     const sceneData = {
       perfilId,
       nombrePerfil,
-      avatarCodigo,
-      avatarColor,
-      onComplete: (_key: string, color: string) => setAvatarColor(color),
+      avatarCodigo: initialCodigo,
+      avatarColor: initialColor,
+      onComplete: (key: string, color: string) => {
+        useGameStore.getState().setAvatarColor(color)
+        useAuthStore.getState().setAvatarCodigo(key)
+        useAuthStore.getState().setAvatarColor(color)
+      },
     }
 
     const config: Phaser.Types.Core.GameConfig = {
@@ -66,7 +76,12 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
     gameRef.current = game
 
     game.events.once('ready', () => {
-      game.scene.start('CharacterSelectScene', sceneData)
+      if (hasExistingAvatar) {
+        // Skip character select — go straight to game
+        game.scene.start('GameScene', sceneData)
+      } else {
+        game.scene.start('CharacterSelectScene', sceneData)
+      }
     })
 
     const handleExit = () => onExit()
@@ -76,6 +91,13 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
       if (!gameRef.current) return
       const { w: nw, h: nh } = getGameSize()
       gameRef.current.scale.resize(nw, nh)
+      // Force Phaser to recalculate CSS dimensions after resize
+      // Scale.FIT doesn't always update the CSS properly without refresh
+      setTimeout(() => {
+        if (gameRef.current) {
+          gameRef.current.scale.refresh()
+        }
+      }, 100)
     }
     window.addEventListener('resize', handleResize)
 

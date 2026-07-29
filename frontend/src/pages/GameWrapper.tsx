@@ -7,6 +7,7 @@ import { consumoService } from '../api/consumoService'
 import { pendingConsumos } from '../api/pendingConsumos'
 import { gameSocket } from '../websocket/gameSocket'
 import { useGameStore } from '../store/gameStore'
+import { useAuthStore } from '../store/authStore'
 import HUD from '../components/HUD'
 import PhaserGame from '../game/PhaserGame'
 
@@ -28,6 +29,8 @@ export default function GameWrapper() {
   const setSaldo = useGameStore((s) => s.setSaldo)
   const setTimer = useGameStore((s) => s.setTimer)
   const resetGame = useGameStore((s) => s.resetGame)
+  const setAvatarCodigo = useAuthStore((s) => s.setAvatarCodigo)
+  const setAvatarColor = useAuthStore((s) => s.setAvatarColor)
 
   // Ref to handleExit so the interval can call it without stale closure
   const handleExitRef = useRef<() => void>(() => {})
@@ -102,6 +105,13 @@ export default function GameWrapper() {
         if (!found) { setError('Perfil no encontrado'); setLoading(false); return }
         setPerfil(found)
         setPerfilId(found.id, found.nombre)
+        // Persist avatar selection for next session — use pony color from code if known
+        const PONY_COLORS: Record<string, string> = {
+          TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
+          EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
+        }
+        setAvatarCodigo(found.avatarCodigo)
+        setAvatarColor(PONY_COLORS[found.avatarCodigo] || useGameStore.getState().avatarColor)
 
         // Load balance
         try {
@@ -118,16 +128,19 @@ export default function GameWrapper() {
           setSaldo(saldo.saldo)
         } catch { /* ignore */ }
 
-        // Consult today's session first — only POST /iniciar if there is no session yet
+        // Consult today's session first
         let sesion = await sesionService.estadoHoy(perfilId)
 
-        if (sesion.estado === 'SIN_SESION') {
-          // No session today — create one
+        // Try to start/continue session if there's no active session.
+        // The backend handles: limit increases, extra sessions, and rejects when truly exhausted.
+        const canStartNew = sesion.estado === 'SIN_SESION' || sesion.estado === 'CERRADA'
+
+        if (canStartNew) {
           sesion = await sesionService.iniciar(perfilId)
         }
 
-        // If time is exhausted, block access
-        if (sesion.minutosRestantes <= 0 || sesion.estado === 'CERRADA') {
+        // If time is actually exhausted, block access
+        if (sesion.minutosRestantes <= 0) {
           setError('Este perfil ya agotó su tiempo de pantalla por hoy. ¡Vuelve mañana! 😴')
           setLoading(false)
           return

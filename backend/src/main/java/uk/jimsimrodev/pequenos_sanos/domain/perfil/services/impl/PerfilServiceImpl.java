@@ -95,6 +95,9 @@ public class PerfilServiceImpl implements IPerfilService {
         if (datos.screenTimeLimit() != null) {
             perfil.setScreenTimeLimit(datos.screenTimeLimit());
         }
+        if (datos.sesionesExtraHoy() != null) {
+            perfil.setSesionesExtraHoy(datos.sesionesExtraHoy());
+        }
 
         return Result.success(DatosRespuestaPerfil.from(perfil));
     }

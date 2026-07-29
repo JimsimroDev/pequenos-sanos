@@ -7,6 +7,7 @@ export interface AvatarState {
   y: number
   direccion: string
   color: string
+  avatarCodigo?: string
 }
 
 interface GameState {
