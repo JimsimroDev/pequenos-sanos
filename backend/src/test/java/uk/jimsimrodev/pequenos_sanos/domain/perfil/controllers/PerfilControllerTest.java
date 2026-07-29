@@ -64,7 +64,7 @@ class PerfilControllerTest {
     void shouldReturn201WhenProfileIsCreatedSuccessfully() throws Exception {
         // Arrange
         var request = new DatosRegistroPerfil("Lucía", (short) 3, "AVATAR_01", (short) 30);
-        var response = new DatosRespuestaPerfil(1L, "Lucía", (short) 3, "AVATAR_01", (short) 30, 0);
+        var response = new DatosRespuestaPerfil(1L, "Lucía", (short) 3, "AVATAR_01", (short) 30, (short) 0, (short) 0, 0);
 
         when(perfilService.crear(any(DatosRegistroPerfil.class), eq(1L)))
                 .thenReturn(Result.success(response));
@@ -97,7 +97,7 @@ class PerfilControllerTest {
     @DisplayName("Should return 200 with profile list when listing")
     void shouldReturn200WithProfileListWhenListing() throws Exception {
         // Arrange
-        var perfil = new DatosRespuestaPerfil(1L, "Lucía", (short) 3, "AVATAR_01", (short) 30, 50);
+        var perfil = new DatosRespuestaPerfil(1L, "Lucía", (short) 3, "AVATAR_01", (short) 30, (short) 0, (short) 0, 50);
         when(perfilService.listar(1L)).thenReturn(List.of(perfil));
 
         // Act & Assert

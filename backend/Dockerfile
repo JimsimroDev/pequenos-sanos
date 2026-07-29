@@ -7,7 +7,7 @@ COPY pom.xml .
 COPY src ./src
 
 # Build and package, skipping tests (run them in CI before building the image)
-RUN mvn clean package -DskipTests
+RUN mvn clean package -Dmaven.test.skip=true
 
 # Extract Spring Boot layers for optimised caching
 RUN java -Djarmode=layertools -jar target/*.jar extract
