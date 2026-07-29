@@ -28,9 +28,32 @@ export default function ProfilePage() {
     try {
       await perfilService.actualizar(perfil.id, { screenTimeLimit })
       setMessage('✅ Guardado correctamente')
+      // Reload profile to get fresh data
+      const lista = await perfilService.listar()
+      const updated = lista.find((p) => p.id === perfil.id)
+      if (updated) setPerfil(updated)
       setTimeout(() => setMessage(''), 3000)
     } catch {
       setMessage('❌ Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDarExtra() {
+    if (!perfil) return
+    setSaving(true)
+    try {
+      const extras = (perfil.sesionesExtraHoy || 0) + 1
+      await perfilService.actualizar(perfil.id, { sesionesExtraHoy: extras })
+      setMessage('✅ ¡Tiempo extra concedido!')
+      // Reload profile
+      const lista = await perfilService.listar()
+      const updated = lista.find((p) => p.id === perfil.id)
+      if (updated) setPerfil(updated)
+      setTimeout(() => setMessage(''), 3000)
+    } catch {
+      setMessage('❌ Error al conceder tiempo extra')
     } finally {
       setSaving(false)
     }
@@ -80,6 +103,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-6">
+            {/* Screen time limit */}
             <div className="bg-indigo-50 rounded-2xl p-4">
               <h3 className="font-semibold text-indigo-800 mb-3">⏱ Control de tiempo de pantalla</h3>
               <label className="block text-sm text-gray-600 mb-2">
@@ -99,8 +123,42 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Extra sessions */}
+            <div className="bg-amber-50 rounded-2xl p-4">
+              <h3 className="font-semibold text-amber-800 mb-3">🎮 Tiempo extra</h3>
+              <p className="text-sm text-amber-700 mb-3">
+                Sesiones extra disponibles hoy: <strong>{perfil.sesionesExtraHoy}</strong>
+                {perfil.sesionesExtraCompradas > 0 && (
+                  <span className="text-amber-500 ml-2">
+                    · {perfil.sesionesExtraCompradas} compradas
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-amber-600 mb-3">
+                Cada sesión extra da {perfil.screenTimeLimit} minutos adicionales de juego.
+              </p>
+              <button
+                onClick={handleDarExtra}
+                disabled={saving || (perfil.sesionesExtraHoy ?? 0) >= 3}
+                className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-bold py-2.5 px-4 rounded-xl transition-colors text-sm"
+              >
+                {saving
+                  ? '⏳ Concediendo...'
+                  : (perfil.sesionesExtraHoy ?? 0) >= 3
+                    ? '✅ Límite alcanzado (3 sesiones)'
+                    : '⭐ Dar más tiempo (+1 sesión)'}
+              </button>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                Próximamente podrás comprar sesiones extra adicionales 🚀
+              </p>
+            </div>
+
             {message && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm text-center">
+              <div className={`rounded-xl px-4 py-3 text-sm text-center ${
+                message.includes('✅') || message.includes('⭐')
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
                 {message}
               </div>
             )}

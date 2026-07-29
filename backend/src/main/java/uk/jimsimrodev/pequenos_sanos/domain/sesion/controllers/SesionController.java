@@ -68,13 +68,15 @@ public class SesionController implements SesionResource {
     }
 
     @Override
-    public ResponseEntity<DatosRespuestaSesion> iniciar(Long perfilId) {
+    public ResponseEntity<?> iniciar(Long perfilId) {
         final var result = sesionService.iniciar(perfilId);
 
         if (result instanceof Result.Success<DatosRespuestaSesion> success) {
             return ResponseEntity.status(HttpStatus.CREATED).body(success.value());
         }
 
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+        final var error = (Result.Error<DatosRespuestaSesion>) result;
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(java.util.Map.of("mensaje", error.message()));
     }
 }

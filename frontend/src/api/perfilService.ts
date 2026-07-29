@@ -6,6 +6,8 @@ export interface PerfilResponse {
   edadAnios: number
   avatarCodigo: string
   screenTimeLimit: number
+  sesionesExtraHoy: number
+  sesionesExtraCompradas: number
   monedasSaldo: number
 }
 
@@ -14,6 +16,7 @@ export interface CrearPerfilPayload {
   edadAnios: number
   avatarCodigo: string
   screenTimeLimit: number
+  sesionesExtraHoy?: number
 }
 
 export const perfilService = {

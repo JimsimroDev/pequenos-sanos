@@ -128,16 +128,19 @@ export default function GameWrapper() {
           setSaldo(saldo.saldo)
         } catch { /* ignore */ }
 
-        // Consult today's session first — only POST /iniciar if there is no session yet
+        // Consult today's session first
         let sesion = await sesionService.estadoHoy(perfilId)
 
-        if (sesion.estado === 'SIN_SESION') {
-          // No session today — create one
+        // Try to start/continue session if there's no active session.
+        // The backend handles: limit increases, extra sessions, and rejects when truly exhausted.
+        const canStartNew = sesion.estado === 'SIN_SESION' || sesion.estado === 'CERRADA'
+
+        if (canStartNew) {
           sesion = await sesionService.iniciar(perfilId)
         }
 
-        // If time is exhausted, block access
-        if (sesion.minutosRestantes <= 0 || sesion.estado === 'CERRADA') {
+        // If time is actually exhausted, block access
+        if (sesion.minutosRestantes <= 0) {
           setError('Este perfil ya agotó su tiempo de pantalla por hoy. ¡Vuelve mañana! 😴')
           setLoading(false)
           return

@@ -6,12 +6,14 @@ import uk.jimsimrodev.pequenos_sanos.domain.perfil.model.PerfilInfantil;
 /**
  * Response DTO with child profile data.
  *
- * @param id              the profile's unique identifier
- * @param nombre          the child's display name
- * @param edadAnios       the child's age in years
- * @param avatarCodigo    the selected avatar code
- * @param screenTimeLimit daily screen time limit in minutes
- * @param monedasSaldo    current coin balance
+ * @param id                   the profile's unique identifier
+ * @param nombre               the child's display name
+ * @param edadAnios            the child's age in years
+ * @param avatarCodigo         the selected avatar code
+ * @param screenTimeLimit      daily screen time limit in minutes
+ * @param sesionesExtraHoy     extra sessions granted for today
+ * @param sesionesExtraCompradas total extra sessions purchased (future)
+ * @param monedasSaldo         current coin balance
  */
 @Schema(description = "Datos del perfil infantil")
 public record DatosRespuestaPerfil(
@@ -31,6 +33,12 @@ public record DatosRespuestaPerfil(
         @Schema(description = "Límite diario de pantalla en minutos", example = "30")
         Short screenTimeLimit,
 
+        @Schema(description = "Sesiones extra disponibles hoy", example = "0")
+        Short sesionesExtraHoy,
+
+        @Schema(description = "Sesiones extra compradas (total acumulado)", example = "0")
+        Short sesionesExtraCompradas,
+
         @Schema(description = "Saldo actual de monedas del perfil", example = "150")
         Integer monedasSaldo
 ) {
@@ -47,6 +55,8 @@ public record DatosRespuestaPerfil(
                 perfil.getEdadAnios(),
                 perfil.getAvatarCodigo(),
                 perfil.getScreenTimeLimit(),
+                perfil.getSesionesExtraHoy(),
+                perfil.getSesionesExtraCompradas(),
                 perfil.getMonedasSaldo()
         );
     }

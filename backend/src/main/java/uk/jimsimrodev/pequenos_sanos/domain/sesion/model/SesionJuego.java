@@ -73,6 +73,7 @@ public class SesionJuego {
 
     // --- Setters ---
 
+    public void setInicio(LocalDateTime inicio) { this.inicio = inicio; }
     public void setFin(LocalDateTime fin) { this.fin = fin; }
     public void setMinutosJugados(Short minutosJugados) { this.minutosJugados = minutosJugados; }
     public void setCerradaPor(String cerradaPor) { this.cerradaPor = cerradaPor; }
