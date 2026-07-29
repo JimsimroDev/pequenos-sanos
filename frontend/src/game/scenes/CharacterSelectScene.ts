@@ -129,7 +129,6 @@ export class CharacterSelectScene extends Phaser.Scene {
     })
 
     // Play / confirm button
-    const isSettings = this.sceneData.settingsMode
     const btnLabel = isSettings ? '✅ ¡Listo!' : '🎮 ¡Comenzar aventura!'
     const playBtn = this.add.rectangle(width / 2, height - 60, 220, 50, 0x10b981)
     playBtn.setStrokeStyle(2, 0x065f46)

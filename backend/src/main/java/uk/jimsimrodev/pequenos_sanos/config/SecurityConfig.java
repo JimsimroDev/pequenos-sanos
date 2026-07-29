@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**", "/api-docs/**", "/documentation")
                         .permitAll()
                         .requestMatchers("/game/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

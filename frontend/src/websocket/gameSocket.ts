@@ -65,7 +65,7 @@ export const gameSocket = {
         stompClient!.subscribe('/topic/mapa/mundo-1', (msg: IMessage) => {
           try {
             const estado: MapaEstado = JSON.parse(msg.body)
-            console.log('[WS] 🗺️ Broadcast recibido. Avatares:', estado.avatares.length, estado.avatares.map(a => `${a.nombre}(${a.perfilId})`))
+            if (import.meta.env.DEV) console.log('[WS] 🗺️ Broadcast recibido. Avatares:', estado.avatares.length, estado.avatares.map(a => `${a.nombre}(${a.perfilId})`))
             useGameStore.getState().setOtrosJugadores(
               estado.avatares.filter((a) => a.perfilId !== perfilId)
             )
@@ -79,7 +79,7 @@ export const gameSocket = {
         stompClient!.subscribe('/topic/alimento/comido', (msg: IMessage) => {
           try {
             const evento: AlimentoComidoEvento = JSON.parse(msg.body)
-            console.log('[WS] 🍎 Alimento comido:', evento)
+            if (import.meta.env.DEV) console.log('[WS] 🍎 Alimento comido:', evento)
             onAlimentoComidoCallback?.(evento)
           } catch { /* ignore */ }
         })
@@ -88,7 +88,7 @@ export const gameSocket = {
         stompClient!.subscribe(`/user/queue/timer`, (msg: IMessage) => {
           try {
             const timer: TimerUpdate = JSON.parse(msg.body)
-            console.log('[WS] ⏱️ Timer update:', timer)
+            if (import.meta.env.DEV) console.log('[WS] ⏱️ Timer update:', timer)
             useGameStore.getState().setTimer(timer.minutosRestantes, timer.segundosRestantes)
             onTimerCallback?.(timer)
           } catch { /* ignore */ }
@@ -96,7 +96,7 @@ export const gameSocket = {
 
         // Subscribe to force logout
         stompClient!.subscribe(`/user/queue/logout`, () => {
-          console.warn('[WS] 🚫 Force logout recibido')
+          if (import.meta.env.DEV) console.warn('[WS] 🚫 Force logout recibido')
           onLogoutCallback?.()
         })
 

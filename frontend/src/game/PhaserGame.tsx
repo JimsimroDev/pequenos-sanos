@@ -91,6 +91,13 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
       if (!gameRef.current) return
       const { w: nw, h: nh } = getGameSize()
       gameRef.current.scale.resize(nw, nh)
+      // Force Phaser to recalculate CSS dimensions after resize
+      // Scale.FIT doesn't always update the CSS properly without refresh
+      setTimeout(() => {
+        if (gameRef.current) {
+          gameRef.current.scale.refresh()
+        }
+      }, 100)
     }
     window.addEventListener('resize', handleResize)
 
