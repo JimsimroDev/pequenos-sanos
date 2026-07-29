@@ -6,6 +6,7 @@ import { pendingConsumos } from '../../api/pendingConsumos'
 import { useGameStore } from '../../store/gameStore'
 import { useAuthStore } from '../../store/authStore'
 import { soundManager } from '../SoundManager'
+import { MapRenderer } from '../map/MapRenderer'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -84,7 +85,6 @@ export class GameScene extends Phaser.Scene {
   private dialogVisible = false
   private score = 0
   private scoreText!: Phaser.GameObjects.Text
-  private tileMap: Phaser.GameObjects.Rectangle[][] = []
   // Settings / pause
   private settingsBtn!: Phaser.GameObjects.Text
   private isPaused = false
@@ -104,8 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, mapW, mapH)
     this.physics.world.setBounds(0, 0, mapW, mapH)
 
-    this.drawTileMap(mapW, mapH)
-    this.createDecorations(mapW, mapH)
+    MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
     this.createHUD()
@@ -114,46 +113,6 @@ export class GameScene extends Phaser.Scene {
     this.createDialogBox()
     this.spawnFoods()
     this.setupWebSocket()
-  }
-
-  private drawTileMap(mapW: number, mapH: number) {
-    const TILE_COLORS = [0x86efac, 0x6ee7b7, 0x4ade80, 0xa7f3d0]
-    for (let r = 0; r < MAP_ROWS; r++) {
-      this.tileMap[r] = []
-      for (let c = 0; c < MAP_COLS; c++) {
-        const color = TILE_COLORS[(r + c) % TILE_COLORS.length]
-        const tile = this.add.rectangle(c * TILE + TILE / 2, r * TILE + TILE / 2, TILE - 1, TILE - 1, color)
-        this.tileMap[r][c] = tile
-      }
-    }
-    // Paths (lighter stripes)
-    for (let c = 0; c < MAP_COLS; c++) {
-      this.add.rectangle(c * TILE + TILE / 2, MAP_ROWS * TILE / 2, TILE - 1, TILE - 1, 0xfef9c3)
-    }
-    for (let r = 0; r < MAP_ROWS; r++) {
-      this.add.rectangle(MAP_COLS * TILE / 2, r * TILE + TILE / 2, TILE - 1, TILE - 1, 0xfef9c3)
-    }
-  }
-
-  private createDecorations(mapW: number, mapH: number) {
-    const treeEmojis = ['🌳', '🌲', '🌴', '🌵']
-    for (let i = 0; i < 18; i++) {
-      const x = Phaser.Math.Between(TILE, mapW - TILE)
-      const y = Phaser.Math.Between(TILE, mapH - TILE)
-      this.add.text(x, y, Phaser.Utils.Array.GetRandom(treeEmojis), { fontSize: '28px' }).setOrigin(0.5)
-    }
-    // Zone signs
-    const zones = [
-      { x: 200, y: 150, label: '🍎 Zona Frutas' },
-      { x: MAP_COLS * TILE - 200, y: 150, label: '🥦 Zona Verduras' },
-      { x: 200, y: MAP_ROWS * TILE - 150, label: '🍗 Zona Proteínas' },
-      { x: MAP_COLS * TILE - 200, y: MAP_ROWS * TILE - 150, label: '🌾 Zona Cereales' },
-    ]
-    zones.forEach(({ x, y, label }) => {
-      const bg = this.add.rectangle(x, y, 160, 36, 0xfffbeb, 0.9)
-      bg.setStrokeStyle(2, 0xf59e0b)
-      this.add.text(x, y, label, { fontSize: '13px', color: '#78350f', fontFamily: 'Arial' }).setOrigin(0.5)
-    })
   }
 
   private createPlayer() {
@@ -173,7 +132,7 @@ export class GameScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel])
+    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel]).setDepth(5)
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
   }
 
@@ -345,7 +304,7 @@ export class GameScene extends Phaser.Scene {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, emoji, label])
+        const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
 
         this.tweens.add({ targets: glow, scaleX: 1.3, scaleY: 1.3, alpha: 0.1, duration: 1000, yoyo: true, repeat: -1 })
         this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 600 })
@@ -480,7 +439,7 @@ export class GameScene extends Phaser.Scene {
       const nameTag = this.add.text(0, 24, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, face, nameTag])
+      const container = this.add.container(av.x, av.y, [body, face, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, { container, nameTag, perfilId: av.perfilId })
     }
   }
@@ -620,7 +579,7 @@ export class GameScene extends Phaser.Scene {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, emoji, label])
+      const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
       this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
