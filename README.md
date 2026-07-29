@@ -125,7 +125,7 @@ Una vez que la aplicación esté ejecutándose, accede a la interfaz interactiva
 4. **Ejecutar la aplicación:**
 
    ```bash
-   ./mvnw spring-boot:run
+   cd backend && ./mvnw spring-boot:run
    ```
 
    La API estará disponible en `http://localhost:8080`
@@ -184,7 +184,7 @@ uk/jimsimrodev/pequenos_sanos/
 
 ```bash
 # Ejecutar todos los tests (usa H2 en memoria, no requiere PostgreSQL)
-./mvnw clean test
+cd backend && ./mvnw clean test
 ```
 
 **Cobertura de pruebas:**

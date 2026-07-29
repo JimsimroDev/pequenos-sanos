@@ -1,0 +1,22 @@
+- generic [ref=e46]:
+  - generic [ref=e47]: 🥦
+  - generic [ref=e48]: 🍎
+  - generic [ref=e49]: 🥕
+  - generic [ref=e50]: 🍌
+  - generic [ref=e51]:
+    - generic [ref=e52]:
+      - generic [ref=e53]: 🌱
+      - heading "Pequeños Sanos" [level=1] [ref=e54]
+      - paragraph [ref=e55]: ¡Aventuras saludables te esperan!
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]: Correo electrónico
+        - textbox "tu@correo.com" [ref=e59]
+      - generic [ref=e60]:
+        - generic [ref=e61]: Contraseña
+        - textbox "••••••••" [ref=e62]
+      - button "🎮 ¡Jugar ahora!" [ref=e63] [cursor=pointer]
+    - paragraph [ref=e64]:
+      - text: ¿No tienes cuenta?
+      - link "Regístrate aquí" [ref=e65] [cursor=pointer]:
+        - /url: "#/register"

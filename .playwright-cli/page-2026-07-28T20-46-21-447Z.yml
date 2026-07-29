@@ -1,0 +1,51 @@
+- generic [ref=e141]:
+  - button "← Volver al panel" [ref=e142] [cursor=pointer]
+  - generic [ref=e143]:
+    - generic [ref=e144]:
+      - generic [ref=e145]: 👶
+      - heading "Nuevo perfil infantil" [level=1] [ref=e146]
+      - paragraph [ref=e147]: Configura la aventura de tu pequeño
+    - generic [ref=e148]:
+      - generic [ref=e149]:
+        - generic [ref=e150]: Nombre del niño/a
+        - textbox "Sofía, Carlos..." [ref=e151]
+      - generic [ref=e152]:
+        - generic [ref=e153]:
+          - text: "Edad:"
+          - generic [ref=e154]: 3 años
+        - slider [ref=e155]: "3"
+        - generic [ref=e156]:
+          - generic [ref=e157]: 2 años
+          - generic [ref=e158]: 3 años
+          - generic [ref=e159]: 4 años
+      - generic [ref=e160]:
+        - generic [ref=e161]: Elige el avatar
+        - generic [ref=e162]:
+          - button "🧭 Explorador" [ref=e163] [cursor=pointer]:
+            - generic [ref=e164]: 🧭
+            - generic [ref=e165]: Explorador
+          - button "👨‍🍳 Chef" [ref=e166] [cursor=pointer]:
+            - generic [ref=e167]: 👨‍🍳
+            - generic [ref=e168]: Chef
+          - button "🏃 Atleta" [ref=e169] [cursor=pointer]:
+            - generic [ref=e170]: 🏃
+            - generic [ref=e171]: Atleta
+          - button "🔬 Científico" [ref=e172] [cursor=pointer]:
+            - generic [ref=e173]: 🔬
+            - generic [ref=e174]: Científico
+          - button "🎨 Artista" [ref=e175] [cursor=pointer]:
+            - generic [ref=e176]: 🎨
+            - generic [ref=e177]: Artista
+          - button "🦸 Superhéroe" [ref=e178] [cursor=pointer]:
+            - generic [ref=e179]: 🦸
+            - generic [ref=e180]: Superhéroe
+      - generic [ref=e181]:
+        - generic [ref=e182]:
+          - text: "Tiempo de pantalla diario:"
+          - generic [ref=e183]: 30 min
+        - slider [ref=e184]: "30"
+        - generic [ref=e185]:
+          - generic [ref=e186]: 10 min
+          - generic [ref=e187]: 1 hora
+          - generic [ref=e188]: 2 horas
+      - button "✨ Crear perfil" [ref=e189] [cursor=pointer]

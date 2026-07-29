@@ -1,6 +1,6 @@
 HELP.md
 target/
-.mvn/wrapper/maven-wrapper.jar
+**/.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
@@ -34,5 +34,18 @@ build/
 
 ### Docker secrets — never commit real .env ###
 /.env
+
 # Local AI runtime state
 .atl/
+skills-lock.json
+
+### OpenCode AI artifacts — never commit ###
+openspec/
+
+### Frontend — dependencies and build output ###
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.production
+frontend/pnpm-lock.yaml
+frontend/pnpm-workspace.yaml
