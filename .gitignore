@@ -49,3 +49,13 @@ frontend/.env.local
 frontend/.env.production
 frontend/pnpm-lock.yaml
 frontend/pnpm-workspace.yaml
+
+### External tool artifacts — never commit ###
+.playwright/
+.playwright-cli/
+.claude/
+sdd/
+
+### Screenshots and debug images ###
+*.png
+*.PNG
