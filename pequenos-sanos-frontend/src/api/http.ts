@@ -18,9 +18,7 @@ http.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       useAuthStore.getState().logout()
-      // Usar hash routing en lugar de redirección absoluta,
-      // así respeta el base path de GitHub Pages (/pequenos-sanos/)
-      window.location.hash = '#/login'
+      window.location.href = '/login'
     }
     return Promise.reject(err)
   }
