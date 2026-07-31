@@ -57,5 +57,5 @@ frontend/pnpm-workspace.yaml
 sdd/
 
 ### Screenshots and debug images ###
-*.png
-*.PNG
+/*.png
+/*.PNG
