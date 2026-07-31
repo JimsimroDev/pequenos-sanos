@@ -1,2 +1,0 @@
-[    4424ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://jimsimrodev.github.io/pequenos-sanos/#/login:0
-[    4621ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://jimsimrodev.github.io/pequenos-sanos/favicon.svg:0
