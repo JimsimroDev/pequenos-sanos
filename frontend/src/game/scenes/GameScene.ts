@@ -56,6 +56,13 @@ interface SceneData {
   onComplete: (key: string, color: string) => void
 }
 
+/** Fixed (screen-space) game objects with the props the info panel animation uses */
+interface ScreenObject extends Phaser.GameObjects.GameObject {
+  y: number
+  setVisible: (visible: boolean) => this
+  setAlpha: (alpha: number) => this
+}
+
 /**
  * GameScene — main gameplay: avatar movement, food collection, superpowers, multiplayer.
  */
@@ -73,16 +80,29 @@ export class GameScene extends Phaser.Scene {
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
   private powerText!: Phaser.GameObjects.Text
-  // Dialog elements as individual fixed objects (not container) to avoid scrollFactor hitbox issues
-  private dialogBg!: Phaser.GameObjects.Rectangle
-  private dialogTitleText!: Phaser.GameObjects.Text
-  private dialogBodyText!: Phaser.GameObjects.Text
-  private dialogBenefitsBg!: Phaser.GameObjects.Rectangle
-  private dialogBenefitsText!: Phaser.GameObjects.Text
-  private dialogCloseBtn!: Phaser.GameObjects.Rectangle
-  private dialogCloseBtnText!: Phaser.GameObjects.Text
-  private dialogObjects: Phaser.GameObjects.GameObject[] = []
+  // Info panel (right-side drawer) — replaces the old centered modal
+  private infoPanelBg!: Phaser.GameObjects.Rectangle
+  private infoPanelTitle!: Phaser.GameObjects.Text
+  private infoPanelBody!: Phaser.GameObjects.Text
+  private infoPanelBenefitsBg!: Phaser.GameObjects.Rectangle
+  private infoPanelBenefitsText!: Phaser.GameObjects.Text
+  private infoPanelEatBtn!: Phaser.GameObjects.Rectangle
+  private infoPanelEatBtnText!: Phaser.GameObjects.Text
+  private infoPanelCloseBtn!: Phaser.GameObjects.Rectangle
+  private infoPanelCloseBtnText!: Phaser.GameObjects.Text
+  private infoPanelObjects: ScreenObject[] = []
+  private infoPanelAnimObjects: ScreenObject[] = []
+  private infoTextObjects: ScreenObject[] = []
+  private infoToggleBtn!: Phaser.GameObjects.Rectangle
+  private infoToggleBtnText!: Phaser.GameObjects.Text
+  private infoToggleKey!: Phaser.Input.Keyboard.Key
+  private blurOverlay!: Phaser.GameObjects.RenderTexture
+  private blurFallback!: Phaser.GameObjects.Rectangle
   private dialogVisible = false
+  private infoPanelHiddenByUser = false
+  private lastFood: AlimentoResponse | null = null
+  private infoPanelTargetY = 0
+  private infoPanelHeight = 0
   private score = 0
   private scoreText!: Phaser.GameObjects.Text
   // Settings / pause
@@ -110,7 +130,7 @@ export class GameScene extends Phaser.Scene {
     this.createHUD()
     this.createSettingsUI()
     this.createPowerOverlay()
-    this.createDialogBox()
+    this.createInfoPanel()
     this.spawnFoods()
     this.setupWebSocket()
   }
@@ -144,6 +164,8 @@ export class GameScene extends Phaser.Scene {
       left: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     }
+    // Toggle key for the info panel — 'I' is free (not used for movement)
+    this.infoToggleKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I)
   }
 
   private createHUD() {
@@ -228,59 +250,147 @@ export class GameScene extends Phaser.Scene {
   private createPowerOverlay() {
     this.powerOverlay = this.add.rectangle(
       this.scale.width / 2, this.scale.height - 50, 320, 44, 0x000000, 0.7
-    ).setScrollFactor(0).setDepth(100).setVisible(false)
+    ).setScrollFactor(0).setDepth(196).setVisible(false)
 
     this.powerText = this.add.text(this.scale.width / 2, this.scale.height - 50, '', {
       fontSize: '16px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
-    }).setScrollFactor(0).setDepth(101).setOrigin(0.5).setVisible(false)
+    }).setScrollFactor(0).setDepth(197).setOrigin(0.5).setVisible(false)
   }
 
-  private createDialogBox() {
+  /** Builds the right-side info panel drawer (replaces the old centered modal). */
+  private createInfoPanel() {
     const W = this.scale.width
     const H = this.scale.height
-    const cx = W / 2
-    const cy = H / 2
+    const PW = Math.min(380, W * 0.45)
+    const PH = H * 0.7
+    const px = W - PW / 2
+    const cy = H * 0.57
+    const top = cy - PH / 2
 
-    // All elements fixed to camera via setScrollFactor(0) — no container
-    this.dialogBg = this.add.rectangle(cx, cy, 420, 290, 0x0f172a)
+    // Panel background — anchored to the right edge
+    this.infoPanelBg = this.add.rectangle(px, cy, PW, PH, 0x0f172a, 0.95)
       .setStrokeStyle(3, 0x10b981)
       .setScrollFactor(0).setDepth(200).setVisible(false)
 
-    this.dialogTitleText = this.add.text(cx, cy - 110, '', {
-      fontSize: '22px', color: '#34d399', fontFamily: 'Arial', fontStyle: 'bold',
+    this.infoPanelTitle = this.add.text(px, top + PH * 0.15, '', {
+      fontSize: '18px', color: '#34d399', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBodyText = this.add.text(cx, cy - 30, '', {
+    this.infoPanelBody = this.add.text(px - PW / 2 + 20, top + PH * 0.3, '', {
       fontSize: '13px', color: '#e2e8f0', fontFamily: 'Arial',
-      wordWrap: { width: 380 }, align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false)
+      wordWrap: { width: PW - 40 }, align: 'left',
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBenefitsBg = this.add.rectangle(cx, cy + 55, 380, 72, 0x1e3a2f)
+    this.infoPanelBenefitsBg = this.add.rectangle(px, top + PH * 0.65, PW - 32, 72, 0x1e3a2f)
       .setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBenefitsText = this.add.text(cx, cy + 55, '', {
+    this.infoPanelBenefitsText = this.add.text(px, top + PH * 0.65, '', {
       fontSize: '12px', color: '#86efac', fontFamily: 'Arial',
-      wordWrap: { width: 360 }, align: 'center',
+      wordWrap: { width: PW - 60 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202).setVisible(false)
 
-    this.dialogCloseBtn = this.add.rectangle(cx, cy + 115, 160, 38, 0x10b981)
+    // Eat button — completes the flow (consumption/coins/power are registered on collect)
+    this.infoPanelEatBtn = this.add.rectangle(px, top + PH * 0.9, 190, 40, 0x10b981)
       .setStrokeStyle(2, 0x065f46)
       .setScrollFactor(0).setDepth(202).setVisible(false)
       .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoPanelEatBtn.setFillStyle(0x059669))
+      .on('pointerout', () => this.infoPanelEatBtn.setFillStyle(0x10b981))
+      .on('pointerdown', () => this.hideInfoPanel(false))
 
-    this.dialogCloseBtnText = this.add.text(cx, cy + 115, '✅ ¡Comer!', {
+    this.infoPanelEatBtnText = this.add.text(px, top + PH * 0.9, '✅ ¡Comer!', {
       fontSize: '14px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(203).setVisible(false)
 
-    this.dialogCloseBtn.on('pointerover', () => this.dialogCloseBtn.setFillStyle(0x059669))
-    this.dialogCloseBtn.on('pointerout', () => this.dialogCloseBtn.setFillStyle(0x10b981))
-    this.dialogCloseBtn.on('pointerdown', () => this.closeDialog())
+    // Close '×' button — top-right corner of the panel; hides it and remembers the preference
+    this.infoPanelCloseBtn = this.add.rectangle(W - 26, top + 24, 32, 32, 0x1e293b)
+      .setStrokeStyle(1, 0x475569)
+      .setScrollFactor(0).setDepth(202).setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoPanelCloseBtn.setFillStyle(0x334155))
+      .on('pointerout', () => this.infoPanelCloseBtn.setFillStyle(0x1e293b))
+      .on('pointerdown', () => this.hideInfoPanel(true))
 
-    this.dialogObjects = [
-      this.dialogBg, this.dialogTitleText, this.dialogBodyText,
-      this.dialogBenefitsBg, this.dialogBenefitsText,
-      this.dialogCloseBtn, this.dialogCloseBtnText,
+    this.infoPanelCloseBtnText = this.add.text(W - 26, top + 24, '×', {
+      fontSize: '22px', color: '#cbd5e1', fontFamily: 'Arial', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(203).setVisible(false)
+
+    this.infoPanelObjects = [
+      this.infoPanelBg, this.infoPanelTitle, this.infoPanelBody,
+      this.infoPanelBenefitsBg, this.infoPanelBenefitsText,
+      this.infoPanelEatBtn, this.infoPanelEatBtnText,
+      this.infoPanelCloseBtn, this.infoPanelCloseBtnText,
     ]
+    this.infoPanelAnimObjects = [...this.infoPanelObjects]
+    this.infoTextObjects = [
+      this.infoPanelTitle, this.infoPanelBody, this.infoPanelBenefitsText,
+      this.infoPanelEatBtnText, this.infoPanelCloseBtnText,
+    ]
+
+    // Floating '📋 Info' toggle — visible only while the panel is hidden by the player
+    this.infoToggleBtn = this.add.rectangle(W - 12, H / 2, 96, 40, 0x0f172a, 0.9)
+      .setStrokeStyle(2, 0x334155)
+      .setOrigin(1, 0.5)
+      .setScrollFactor(0).setDepth(205).setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoToggleBtn.setStrokeStyle(2, 0x64748b))
+      .on('pointerout', () => this.infoToggleBtn.setStrokeStyle(2, 0x334155))
+      .on('pointerdown', () => this.toggleInfoPanel())
+
+    this.infoToggleBtnText = this.add.text(W - 24, H / 2, '📋 Info', {
+      fontSize: '13px', color: '#e2e8f0', fontFamily: 'Arial', fontStyle: 'bold',
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(206).setVisible(false)
+
+    // Blur overlay — RenderTexture snapshot of the world, blurred with postFX (WebGL only)
+    this.blurOverlay = this.add.renderTexture(0, 0, W, H)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(195).setVisible(false)
+    this.blurOverlay.postFX.addBlur(1, 0, 0, 12, 0xffffff, 6)
+
+    // Fallback overlay for non-WebGL renderers: dark translucent fill
+    this.blurFallback = this.add.rectangle(W / 2, H / 2, W, H, 0x0f172a, 0.65)
+      .setScrollFactor(0).setDepth(195).setVisible(false)
+
+    this.layoutInfoPanel()
+  }
+
+  /** (Re)positions the panel based on the current viewport size. */
+  private layoutInfoPanel() {
+    const W = this.scale.width
+    const H = this.scale.height
+    const PW = Math.min(380, W * 0.45)
+    const PH = H * 0.7
+    const px = W - PW / 2
+    const cy = H * 0.57
+    const top = cy - PH / 2
+    const bottom = cy + PH / 2
+    const btnW = Math.min(190, PW - 32)
+
+    this.infoPanelTargetY = cy
+    this.infoPanelHeight = PH
+
+    this.infoPanelBg.setPosition(px, cy).setSize(PW, PH)
+    this.infoPanelCloseBtn.setPosition(W - 26, top + 24)
+    this.infoPanelCloseBtnText.setPosition(W - 26, top + 24)
+    this.infoPanelTitle.setPosition(px, top + PH * 0.15)
+    this.infoPanelTitle.setWordWrapWidth(Math.max(60, PW - 70))
+
+    const bodyX = px - PW / 2 + 20
+    const bodyY = top + PH * 0.3
+    this.infoPanelBody.setPosition(bodyX, bodyY)
+    this.infoPanelBody.setWordWrapWidth(PW - 40)
+
+    // Benefits card sits below the body text, eat button below that
+    const benefitsY = Math.min(bodyY + this.infoPanelBody.height + 24, bottom - 120)
+    const eatY = benefitsY + 56
+
+    this.infoPanelBenefitsBg.setPosition(px, benefitsY).setSize(PW - 32, 72)
+    this.infoPanelBenefitsText.setPosition(px, benefitsY)
+    this.infoPanelBenefitsText.setWordWrapWidth(PW - 60)
+    this.infoPanelEatBtn.setPosition(px, eatY).setSize(btnW, 40)
+    this.infoPanelEatBtnText.setPosition(px, eatY)
+
+    this.infoToggleBtn.setPosition(W - 12, H / 2)
+    this.infoToggleBtnText.setPosition(W - 24, H / 2)
   }
 
   private async spawnFoods() {
@@ -466,60 +576,133 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: this.playerBody, alpha: 0.3, duration: 100, yoyo: true, repeat: 5 })
   }
 
-  private showDialog(alimento: AlimentoResponse) {
+  private showInfoPanel(alimento: AlimentoResponse, forceShow = false) {
     if (this.dialogVisible) return
-    this.dialogVisible = true
+    this.lastFood = alimento
 
     const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
     const catColor = pwr?.color ? parseInt(pwr.color.replace('#', ''), 16) : 0x10b981
 
     // Dynamic banner — food category color
-    this.dialogBg.setStrokeStyle(3, catColor)
-    this.dialogTitleText.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
+    this.infoPanelBg.setStrokeStyle(3, catColor)
+    this.infoPanelTitle.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
 
     // Varied dialogue — use API descripcion + fun message
     const funMsg = this.getFunMessage(alimento.categoria, alimento.nombre)
     const desc = alimento.descripcion || 'Un alimento muy nutritivo y delicioso.'
-    this.dialogBodyText.setText(`${desc}\n\n${funMsg}`)
+    this.infoPanelBody.setText(`${desc}\n\n${funMsg}`)
 
     // Benefits with category-colored background
-    this.dialogBenefitsBg.setFillStyle(catColor, 0.2)
-    this.dialogBenefitsBg.setStrokeStyle(1, catColor)
-    this.dialogBenefitsText.setText(
+    this.infoPanelBenefitsBg.setFillStyle(catColor, 0.2)
+    this.infoPanelBenefitsBg.setStrokeStyle(1, catColor)
+    this.infoPanelBenefitsText.setText(
       `${pwr?.emoji || '✨'} Superpoder: ${pwr?.nombre || '?'}\n${pwr?.descripcion || ''}`
     )
 
-    // Category-colored close button
-    this.dialogCloseBtn.setFillStyle(catColor)
-    this.dialogCloseBtn.setStrokeStyle(2, 0x000000, 0.2)
+    // Category-colored eat button
+    this.infoPanelEatBtn.setFillStyle(catColor)
+    this.infoPanelEatBtn.setStrokeStyle(2, 0x000000, 0.2)
 
     // Sound
     soundManager.playCollect()
 
-    // Show all dialog elements
-    this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true))
+    // Respect the player's manual-hide preference: refresh content but keep it hidden
+    if (this.infoPanelHiddenByUser && !forceShow) return
 
-    // Pop-in animation on the background
-    this.dialogBg.setScale(0.85)
+    this.infoPanelHiddenByUser = false
+    this.dialogVisible = true
+
+    this.layoutInfoPanel()
+    // Hide the floating toggle BEFORE capturing, so it never appears ghosted in the blur
+    this.infoToggleBtn.setVisible(false)
+    this.infoToggleBtnText.setVisible(false)
+    this.captureBlurOverlay()
+    this.showInfoPanelObjects(true)
+    this.animateInfoPanelSlide()
+  }
+
+  /** Captures the current view behind the panel: real blur (WebGL) or dark fallback (Canvas). */
+  private captureBlurOverlay() {
+    const cam = this.cameras.main
+    const W = this.scale.width
+    const H = this.scale.height
+
+    if (this.renderer.type === Phaser.WEBGL) {
+      // Real Gaussian blur via RenderTexture + postFX
+      if (this.blurOverlay.width !== W || this.blurOverlay.height !== H) {
+        this.blurOverlay.resize(W, H)
+      }
+      // Keep the overlay invisible while drawing so it is not captured into itself
+      this.blurOverlay.setVisible(false)
+      this.blurOverlay.camera.setScroll(cam.scrollX, cam.scrollY)
+      this.blurOverlay.clear()
+      this.blurOverlay.draw(this.children, 0, 0)
+      this.blurOverlay.setVisible(true).setAlpha(0)
+      this.tweens.add({ targets: this.blurOverlay, alpha: 1, duration: 250 })
+      this.blurFallback.setVisible(false)
+      this.infoPanelBg.setFillStyle(0x0f172a, 0.95)
+    } else {
+      // Fallback: postFX is WebGL-only, so darken the screen instead
+      this.blurFallback.setPosition(W / 2, H / 2).setSize(W, H)
+      this.blurFallback.setVisible(true).setAlpha(0)
+      this.tweens.add({ targets: this.blurFallback, alpha: 0.65, duration: 250 })
+      this.blurOverlay.setVisible(false)
+      this.infoPanelBg.setFillStyle(0x0f172a, 0.85)
+    }
+  }
+
+  /** Slides the panel up from the bottom edge with ease, then fades the text in. */
+  private animateInfoPanelSlide() {
+    // Distance each object must travel: from below the screen to its layout position.
+    // The layout Y positions differ per object, so we shift them down by `offset` and
+    // then tween back up with a RELATIVE '-=' value that preserves every object's offset.
+    const offset = this.scale.height + this.infoPanelHeight - this.infoPanelTargetY
+
+    this.infoPanelAnimObjects.forEach(o => { o.y += offset })
+    this.infoTextObjects.forEach(o => o.setAlpha(0))
+
     this.tweens.add({
-      targets: [this.dialogBg, this.dialogTitleText, this.dialogBodyText,
-                this.dialogBenefitsBg, this.dialogBenefitsText,
-                this.dialogCloseBtn, this.dialogCloseBtnText],
-      alpha: { from: 0, to: 1 },
-      duration: 200,
+      targets: this.infoPanelAnimObjects,
+      y: `-=${offset}`,
+      duration: 350,
+      ease: 'Back.easeOut',
     })
     this.tweens.add({
-      targets: this.dialogBg,
-      scaleX: 1, scaleY: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
+      targets: this.infoTextObjects,
+      alpha: 1,
+      delay: 350,
+      duration: 300,
     })
   }
 
-  private closeDialog() {
+  private showInfoPanelObjects(visible: boolean) {
+    this.infoPanelObjects.forEach(o => o.setVisible(visible))
+  }
+
+  private hideInfoPanel(userInitiated: boolean) {
+    if (!this.dialogVisible && !userInitiated) return
     this.dialogVisible = false
-    this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false))
+    if (userInitiated) this.infoPanelHiddenByUser = true
+
+    this.showInfoPanelObjects(false)
+    this.blurOverlay.setVisible(false)
+    this.blurFallback.setVisible(false)
+
+    if (this.infoPanelHiddenByUser) {
+      this.layoutInfoPanel()
+      this.infoToggleBtn.setVisible(true)
+      this.infoToggleBtnText.setVisible(true)
+    }
     soundManager.playClick()
+  }
+
+  /** Toggles the panel: hides it if visible, re-shows the last food if hidden by the player. */
+  private toggleInfoPanel() {
+    if (this.dialogVisible) {
+      this.hideInfoPanel(true)
+    } else if (this.infoPanelHiddenByUser && this.lastFood) {
+      this.showInfoPanel(this.lastFood, true)
+    }
   }
 
   private async collectFood(food: FoodSprite) {
@@ -541,8 +724,8 @@ export class GameScene extends Phaser.Scene {
 
     this.tweens.add({ targets: this.scoreText, scaleX: 1.4, scaleY: 1.4, duration: 150, yoyo: true })
 
-    // Show dialog then register with backend
-    this.showDialog(food.alimento)
+    // Show info panel then register with backend
+    this.showInfoPanel(food.alimento)
     this.showPower(food.alimento.categoria)
 
     // Queue the consumption BEFORE the HTTP call so it survives tab close
@@ -589,6 +772,9 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (this.isPaused) return // Don't move when settings are open
+
+    // Toggle the info panel (I key) — independent of movement
+    if (Phaser.Input.Keyboard.JustDown(this.infoToggleKey)) this.toggleInfoPanel()
 
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
     let dx = 0, dy = 0
