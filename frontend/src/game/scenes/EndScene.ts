@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { soundManager } from '../SoundManager'
 
 interface EndSceneData {
   score: number
@@ -22,6 +23,9 @@ export class EndScene extends Phaser.Scene {
   }
 
   create() {
+    soundManager.stopMusic()
+    soundManager.playGameOver()
+
     const { width, height } = this.scale
 
     // Dark background
