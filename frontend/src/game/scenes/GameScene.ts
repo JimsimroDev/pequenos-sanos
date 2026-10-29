@@ -71,11 +71,6 @@ export class GameScene extends Phaser.Scene {
   private sceneData!: SceneData
   private lastMoveTime = 0
   private lastStepTime = 0
-  // Touch/click-to-move target (steering 'arrive')
-  private hasTarget = false
-  private targetX = 0
-  private targetY = 0
-  private targetMarker: Phaser.GameObjects.Arc | null = null
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
