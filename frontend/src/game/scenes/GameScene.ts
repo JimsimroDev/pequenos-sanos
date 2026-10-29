@@ -138,6 +138,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     MapRenderer.draw(this)
+    MapRenderer.animate(this)
     this.createPlayer()
     this.createControls()
     this.createHUD()
