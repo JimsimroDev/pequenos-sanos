@@ -70,6 +70,7 @@ export class GameScene extends Phaser.Scene {
   private otherPlayers: Map<number, OtherPlayer> = new Map()
   private sceneData!: SceneData
   private lastMoveTime = 0
+  private lastStepTime = 0
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
@@ -101,6 +102,7 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text
   // Settings / pause
   private settingsBtn!: Phaser.GameObjects.Text
+  private muteBtn!: Phaser.GameObjects.Text
   private isPaused = false
   private pauseOverlay!: Phaser.GameObjects.Rectangle
 
@@ -139,6 +141,10 @@ export class GameScene extends Phaser.Scene {
     this.createInfoPanel()
     this.spawnFoods()
     this.setupWebSocket()
+
+    // Start background music and reset step timer
+    soundManager.startMusic()
+    this.lastStepTime = 0
   }
 
   private createPlayer() {
@@ -181,8 +187,21 @@ export class GameScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100)
   }
 
-  /** Creates the settings gear button and pause overlay */
+  /** Creates the settings gear button, mute button and pause overlay */
   private createSettingsUI() {
+    // Mute button (left of the gear)
+    this.muteBtn = this.add.text(this.scale.width - 60, 16, soundManager.isMuted() ? '🔇' : '🔊', {
+      fontSize: '22px',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(110)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        const m = soundManager.toggleMute()
+        this.muteBtn.setText(m ? '🔇' : '🔊')
+        soundManager.playClick()
+      })
+      .on('pointerover', () => this.muteBtn.setAlpha(0.7))
+      .on('pointerout', () => this.muteBtn.setAlpha(1))
+
     // Gear button in top-right corner
     this.settingsBtn = this.add.text(this.scale.width - 20, 16, '⚙️', {
       fontSize: '24px',
@@ -938,6 +957,15 @@ export class GameScene extends Phaser.Scene {
 
     this.player.setPosition(newX, newY)
 
+    // Step sound while moving
+    if (dir !== 'idle') {
+      const now = Date.now()
+      if (now - this.lastStepTime > 350) {
+        this.lastStepTime = now
+        soundManager.playStep()
+      }
+    }
+
     // Walk animation + facing (keeps last direction when idle)
     if (dir !== 'idle') this.lastDir = dir
     setPonyAnim(
@@ -967,6 +995,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    soundManager.stopMusic()
     gameSocket.disconnect()
   }
 }
