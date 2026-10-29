@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
+import { BootScene } from './scenes/BootScene'
 import { CharacterSelectScene } from './scenes/CharacterSelectScene'
 import { GameScene } from './scenes/GameScene'
 import { EndScene } from './scenes/EndScene'
@@ -63,7 +64,7 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
         default: 'arcade',
         arcade: { gravity: { x: 0, y: 0 }, debug: false },
       },
-      scene: [new CharacterSelectScene(), GameScene, EndScene],
+      scene: [BootScene, new CharacterSelectScene(), GameScene, EndScene],
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
