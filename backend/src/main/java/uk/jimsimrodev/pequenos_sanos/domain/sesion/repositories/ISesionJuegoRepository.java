@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import uk.jimsimrodev.pequenos_sanos.domain.sesion.model.SesionJuego;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -12,9 +13,17 @@ import java.util.Optional;
 public interface ISesionJuegoRepository extends JpaRepository<SesionJuego, Long> {
 
     /**
+     * Returns all sessions for a child profile, ordered by most recent session date first.
+     *
+     * @param perfilId the child profile ID
+     * @return ordered list of sessions
+     */
+    List<SesionJuego> findByPerfilIdOrderByFechaSesionDesc(Long perfilId);
+
+    /**
      * Finds a session for a given profile and date.
      *
-     * @param perfilId    the child profile ID
+     * @param perfilId    the profile ID
      * @param fechaSesion the session date
      * @return the session if it exists
      */

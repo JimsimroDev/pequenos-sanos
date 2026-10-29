@@ -7,34 +7,17 @@ import { useGameStore } from '../../store/gameStore'
 import { useAuthStore } from '../../store/authStore'
 import { soundManager } from '../SoundManager'
 import { MapRenderer } from '../map/MapRenderer'
+import { MAP_OBSTACLES, MapObstacle } from '../map/MapRenderer'
+import { ensurePonyTextures, normalizePonyKey, setPonyAnim, PonyKey, Facing } from '../textures/PonyTextures'
 
 const TILE = 48
 const MAP_COLS = 25
 const MAP_ROWS = 20
 const PLAYER_SPEED = 160
+const PLAYER_ACCEL = 1400
+const PLAYER_FRICTION = 10
 const FOOD_COUNT = 12
 const SUPERPODER_DURATION = 30000
-
-/** Map avatar codes to their pony emoji and color */
-const PONY_EMOJIS: Record<string, string> = {
-  TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
-  EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
-}
-const PONY_COLORS: Record<string, string> = {
-  TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
-  EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
-}
-
-/** Derive a pony emoji from color or avatarCodigo */
-function getPonyEmoji(avatarCodigo?: string, color?: string): string {
-  if (avatarCodigo && PONY_EMOJIS[avatarCodigo]) return PONY_EMOJIS[avatarCodigo]
-  if (color) {
-    // Fallback: map color back to pony
-    const match = Object.entries(PONY_COLORS).find(([, c]) => c === color)
-    if (match) return PONY_EMOJIS[match[0]] || '🦄'
-  }
-  return '🦄'
-}
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
@@ -46,6 +29,11 @@ interface OtherPlayer {
   container: Phaser.GameObjects.Container
   nameTag: Phaser.GameObjects.Text
   perfilId: number
+  body: Phaser.GameObjects.Sprite
+  detail: Phaser.GameObjects.Sprite
+  pony: PonyKey
+  lastDir: Facing
+  idleTimer?: Phaser.Time.TimerEvent
 }
 
 interface SceneData {
@@ -56,13 +44,26 @@ interface SceneData {
   onComplete: (key: string, color: string) => void
 }
 
+/** Fixed (screen-space) game objects with the props the info panel animation uses */
+interface ScreenObject extends Phaser.GameObjects.GameObject {
+  y: number
+  setVisible: (visible: boolean) => this
+  setAlpha: (alpha: number) => this
+}
+
 /**
  * GameScene — main gameplay: avatar movement, food collection, superpowers, multiplayer.
  */
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container
-  private playerBody!: Phaser.GameObjects.Arc
+  private playerBodySprite!: Phaser.GameObjects.Sprite
+  private playerDetailSprite!: Phaser.GameObjects.Sprite
   private playerLabel!: Phaser.GameObjects.Text
+  private playerPony: PonyKey = 'TWILIGHT'
+  private lastDir: Facing = 'down'
+  private velX = 0
+  private velY = 0
+  private obstacles: MapObstacle[] = MAP_OBSTACLES
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private foods: FoodSprite[] = []
@@ -73,16 +74,29 @@ export class GameScene extends Phaser.Scene {
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
   private powerText!: Phaser.GameObjects.Text
-  // Dialog elements as individual fixed objects (not container) to avoid scrollFactor hitbox issues
-  private dialogBg!: Phaser.GameObjects.Rectangle
-  private dialogTitleText!: Phaser.GameObjects.Text
-  private dialogBodyText!: Phaser.GameObjects.Text
-  private dialogBenefitsBg!: Phaser.GameObjects.Rectangle
-  private dialogBenefitsText!: Phaser.GameObjects.Text
-  private dialogCloseBtn!: Phaser.GameObjects.Rectangle
-  private dialogCloseBtnText!: Phaser.GameObjects.Text
-  private dialogObjects: Phaser.GameObjects.GameObject[] = []
+  // Info panel (right-side drawer) — replaces the old centered modal
+  private infoPanelBg!: Phaser.GameObjects.Rectangle
+  private infoPanelTitle!: Phaser.GameObjects.Text
+  private infoPanelBody!: Phaser.GameObjects.Text
+  private infoPanelBenefitsBg!: Phaser.GameObjects.Rectangle
+  private infoPanelBenefitsText!: Phaser.GameObjects.Text
+  private infoPanelEatBtn!: Phaser.GameObjects.Rectangle
+  private infoPanelEatBtnText!: Phaser.GameObjects.Text
+  private infoPanelCloseBtn!: Phaser.GameObjects.Rectangle
+  private infoPanelCloseBtnText!: Phaser.GameObjects.Text
+  private infoPanelObjects: ScreenObject[] = []
+  private infoPanelAnimObjects: ScreenObject[] = []
+  private infoTextObjects: ScreenObject[] = []
+  private infoToggleBtn!: Phaser.GameObjects.Rectangle
+  private infoToggleBtnText!: Phaser.GameObjects.Text
+  private infoToggleKey!: Phaser.Input.Keyboard.Key
+  private blurOverlay!: Phaser.GameObjects.RenderTexture
+  private blurFallback!: Phaser.GameObjects.Rectangle
   private dialogVisible = false
+  private infoPanelHiddenByUser = false
+  private lastFood: AlimentoResponse | null = null
+  private infoPanelTargetY = 0
+  private infoPanelHeight = 0
   private score = 0
   private scoreText!: Phaser.GameObjects.Text
   // Settings / pause
@@ -104,13 +118,25 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, mapW, mapH)
     this.physics.world.setBounds(0, 0, mapW, mapH)
 
+    // Procedural pony sprites — idempotent, safe if BootScene already ran
+    ensurePonyTextures(this)
+
+    // Spark texture for collect particles (idempotent)
+    if (!this.textures.exists('spark')) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff)
+      g.fillCircle(4, 4, 4)
+      g.generateTexture('spark', 8, 8)
+      g.destroy()
+    }
+
     MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
     this.createHUD()
     this.createSettingsUI()
     this.createPowerOverlay()
-    this.createDialogBox()
+    this.createInfoPanel()
     this.spawnFoods()
     this.setupWebSocket()
   }
@@ -119,20 +145,20 @@ export class GameScene extends Phaser.Scene {
     const cx = (MAP_COLS * TILE) / 2
     const cy = (MAP_ROWS * TILE) / 2
     const colorHex = parseInt(this.sceneData.avatarColor.replace('#', ''), 16)
+    this.playerPony = normalizePonyKey(this.sceneData.avatarCodigo)
 
-    // Avatar emoji based on selected MLP pony character
-    const avatarEmoji = getPonyEmoji(this.sceneData.avatarCodigo, this.sceneData.avatarColor)
+    // Procedural pony: tintable body layer + fixed-color detail layer (mane, eyes, cutie mark)
+    this.playerBodySprite = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
+    this.playerDetailSprite = this.add.sprite(0, -4, `pony-detail-${this.playerPony}-down-0`)
 
-    this.playerBody = this.add.circle(0, 0, 20, colorHex)
-    this.playerBody.setStrokeStyle(3, 0xffffff)
-
-    const face = this.add.text(0, -2, avatarEmoji, { fontSize: '20px' }).setOrigin(0.5)
-    this.playerLabel = this.add.text(0, 28, this.sceneData.nombrePerfil, {
+    this.playerLabel = this.add.text(0, 26, this.sceneData.nombrePerfil, {
       fontSize: '12px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel]).setDepth(5)
+    this.player = this.add.container(cx, cy, [
+      this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
+    ]).setDepth(5)
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
   }
 
@@ -144,6 +170,8 @@ export class GameScene extends Phaser.Scene {
       left: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     }
+    // Toggle key for the info panel — 'I' is free (not used for movement)
+    this.infoToggleKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I)
   }
 
   private createHUD() {
@@ -228,59 +256,147 @@ export class GameScene extends Phaser.Scene {
   private createPowerOverlay() {
     this.powerOverlay = this.add.rectangle(
       this.scale.width / 2, this.scale.height - 50, 320, 44, 0x000000, 0.7
-    ).setScrollFactor(0).setDepth(100).setVisible(false)
+    ).setScrollFactor(0).setDepth(196).setVisible(false)
 
     this.powerText = this.add.text(this.scale.width / 2, this.scale.height - 50, '', {
       fontSize: '16px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
-    }).setScrollFactor(0).setDepth(101).setOrigin(0.5).setVisible(false)
+    }).setScrollFactor(0).setDepth(197).setOrigin(0.5).setVisible(false)
   }
 
-  private createDialogBox() {
+  /** Builds the right-side info panel drawer (replaces the old centered modal). */
+  private createInfoPanel() {
     const W = this.scale.width
     const H = this.scale.height
-    const cx = W / 2
-    const cy = H / 2
+    const PW = Math.min(380, W * 0.45)
+    const PH = H * 0.7
+    const px = W - PW / 2
+    const cy = H * 0.57
+    const top = cy - PH / 2
 
-    // All elements fixed to camera via setScrollFactor(0) — no container
-    this.dialogBg = this.add.rectangle(cx, cy, 420, 290, 0x0f172a)
+    // Panel background — anchored to the right edge
+    this.infoPanelBg = this.add.rectangle(px, cy, PW, PH, 0x0f172a, 0.95)
       .setStrokeStyle(3, 0x10b981)
       .setScrollFactor(0).setDepth(200).setVisible(false)
 
-    this.dialogTitleText = this.add.text(cx, cy - 110, '', {
-      fontSize: '22px', color: '#34d399', fontFamily: 'Arial', fontStyle: 'bold',
+    this.infoPanelTitle = this.add.text(px, top + PH * 0.15, '', {
+      fontSize: '18px', color: '#34d399', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBodyText = this.add.text(cx, cy - 30, '', {
+    this.infoPanelBody = this.add.text(px - PW / 2 + 20, top + PH * 0.3, '', {
       fontSize: '13px', color: '#e2e8f0', fontFamily: 'Arial',
-      wordWrap: { width: 380 }, align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setVisible(false)
+      wordWrap: { width: PW - 40 }, align: 'left',
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBenefitsBg = this.add.rectangle(cx, cy + 55, 380, 72, 0x1e3a2f)
+    this.infoPanelBenefitsBg = this.add.rectangle(px, top + PH * 0.65, PW - 32, 72, 0x1e3a2f)
       .setScrollFactor(0).setDepth(201).setVisible(false)
 
-    this.dialogBenefitsText = this.add.text(cx, cy + 55, '', {
+    this.infoPanelBenefitsText = this.add.text(px, top + PH * 0.65, '', {
       fontSize: '12px', color: '#86efac', fontFamily: 'Arial',
-      wordWrap: { width: 360 }, align: 'center',
+      wordWrap: { width: PW - 60 }, align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202).setVisible(false)
 
-    this.dialogCloseBtn = this.add.rectangle(cx, cy + 115, 160, 38, 0x10b981)
+    // Eat button — completes the flow (consumption/coins/power are registered on collect)
+    this.infoPanelEatBtn = this.add.rectangle(px, top + PH * 0.9, 190, 40, 0x10b981)
       .setStrokeStyle(2, 0x065f46)
       .setScrollFactor(0).setDepth(202).setVisible(false)
       .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoPanelEatBtn.setFillStyle(0x059669))
+      .on('pointerout', () => this.infoPanelEatBtn.setFillStyle(0x10b981))
+      .on('pointerdown', () => this.hideInfoPanel(false))
 
-    this.dialogCloseBtnText = this.add.text(cx, cy + 115, '✅ ¡Comer!', {
+    this.infoPanelEatBtnText = this.add.text(px, top + PH * 0.9, '✅ ¡Comer!', {
       fontSize: '14px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(203).setVisible(false)
 
-    this.dialogCloseBtn.on('pointerover', () => this.dialogCloseBtn.setFillStyle(0x059669))
-    this.dialogCloseBtn.on('pointerout', () => this.dialogCloseBtn.setFillStyle(0x10b981))
-    this.dialogCloseBtn.on('pointerdown', () => this.closeDialog())
+    // Close '×' button — top-right corner of the panel; hides it and remembers the preference
+    this.infoPanelCloseBtn = this.add.rectangle(W - 26, top + 24, 32, 32, 0x1e293b)
+      .setStrokeStyle(1, 0x475569)
+      .setScrollFactor(0).setDepth(202).setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoPanelCloseBtn.setFillStyle(0x334155))
+      .on('pointerout', () => this.infoPanelCloseBtn.setFillStyle(0x1e293b))
+      .on('pointerdown', () => this.hideInfoPanel(true))
 
-    this.dialogObjects = [
-      this.dialogBg, this.dialogTitleText, this.dialogBodyText,
-      this.dialogBenefitsBg, this.dialogBenefitsText,
-      this.dialogCloseBtn, this.dialogCloseBtnText,
+    this.infoPanelCloseBtnText = this.add.text(W - 26, top + 24, '×', {
+      fontSize: '22px', color: '#cbd5e1', fontFamily: 'Arial', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(203).setVisible(false)
+
+    this.infoPanelObjects = [
+      this.infoPanelBg, this.infoPanelTitle, this.infoPanelBody,
+      this.infoPanelBenefitsBg, this.infoPanelBenefitsText,
+      this.infoPanelEatBtn, this.infoPanelEatBtnText,
+      this.infoPanelCloseBtn, this.infoPanelCloseBtnText,
     ]
+    this.infoPanelAnimObjects = [...this.infoPanelObjects]
+    this.infoTextObjects = [
+      this.infoPanelTitle, this.infoPanelBody, this.infoPanelBenefitsText,
+      this.infoPanelEatBtnText, this.infoPanelCloseBtnText,
+    ]
+
+    // Floating '📋 Info' toggle — visible only while the panel is hidden by the player
+    this.infoToggleBtn = this.add.rectangle(W - 12, H / 2, 96, 40, 0x0f172a, 0.9)
+      .setStrokeStyle(2, 0x334155)
+      .setOrigin(1, 0.5)
+      .setScrollFactor(0).setDepth(205).setVisible(false)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.infoToggleBtn.setStrokeStyle(2, 0x64748b))
+      .on('pointerout', () => this.infoToggleBtn.setStrokeStyle(2, 0x334155))
+      .on('pointerdown', () => this.toggleInfoPanel())
+
+    this.infoToggleBtnText = this.add.text(W - 24, H / 2, '📋 Info', {
+      fontSize: '13px', color: '#e2e8f0', fontFamily: 'Arial', fontStyle: 'bold',
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(206).setVisible(false)
+
+    // Blur overlay — RenderTexture snapshot of the world, blurred with postFX (WebGL only)
+    this.blurOverlay = this.add.renderTexture(0, 0, W, H)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(195).setVisible(false)
+    this.blurOverlay.postFX.addBlur(1, 0, 0, 12, 0xffffff, 6)
+
+    // Fallback overlay for non-WebGL renderers: dark translucent fill
+    this.blurFallback = this.add.rectangle(W / 2, H / 2, W, H, 0x0f172a, 0.65)
+      .setScrollFactor(0).setDepth(195).setVisible(false)
+
+    this.layoutInfoPanel()
+  }
+
+  /** (Re)positions the panel based on the current viewport size. */
+  private layoutInfoPanel() {
+    const W = this.scale.width
+    const H = this.scale.height
+    const PW = Math.min(380, W * 0.45)
+    const PH = H * 0.7
+    const px = W - PW / 2
+    const cy = H * 0.57
+    const top = cy - PH / 2
+    const bottom = cy + PH / 2
+    const btnW = Math.min(190, PW - 32)
+
+    this.infoPanelTargetY = cy
+    this.infoPanelHeight = PH
+
+    this.infoPanelBg.setPosition(px, cy).setSize(PW, PH)
+    this.infoPanelCloseBtn.setPosition(W - 26, top + 24)
+    this.infoPanelCloseBtnText.setPosition(W - 26, top + 24)
+    this.infoPanelTitle.setPosition(px, top + PH * 0.15)
+    this.infoPanelTitle.setWordWrapWidth(Math.max(60, PW - 70))
+
+    const bodyX = px - PW / 2 + 20
+    const bodyY = top + PH * 0.3
+    this.infoPanelBody.setPosition(bodyX, bodyY)
+    this.infoPanelBody.setWordWrapWidth(PW - 40)
+
+    // Benefits card sits below the body text, eat button below that
+    const benefitsY = Math.min(bodyY + this.infoPanelBody.height + 24, bottom - 120)
+    const eatY = benefitsY + 56
+
+    this.infoPanelBenefitsBg.setPosition(px, benefitsY).setSize(PW - 32, 72)
+    this.infoPanelBenefitsText.setPosition(px, benefitsY)
+    this.infoPanelBenefitsText.setWordWrapWidth(PW - 60)
+    this.infoPanelEatBtn.setPosition(px, eatY).setSize(btnW, 40)
+    this.infoPanelEatBtnText.setPosition(px, eatY)
+
+    this.infoToggleBtn.setPosition(W - 12, H / 2)
+    this.infoToggleBtnText.setPosition(W - 24, H / 2)
   }
 
   private async spawnFoods() {
@@ -424,23 +540,39 @@ export class GameScene extends Phaser.Scene {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
-      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
-      // Update avatar emoji if it changed
-      const existingFace = op.container.list[1] as Phaser.GameObjects.Text
-      if (existingFace && av.avatarCodigo) {
-        const newEmoji = getPonyEmoji(av.avatarCodigo, av.color)
-        if (existingFace.text !== newEmoji) existingFace.setText(newEmoji)
+      // Animate based on the movement delta before tweening to the new position
+      const dx = av.x - op.container.x
+      const dy = av.y - op.container.y
+      if (Math.abs(dx) + Math.abs(dy) > 2) {
+        const dir: Facing = Math.abs(dx) > Math.abs(dy)
+          ? (dx > 0 ? 'right' : 'left')
+          : (dy > 0 ? 'down' : 'up')
+        op.lastDir = dir
+        setPonyAnim(op.body, op.detail, op.pony, dir, true)
+        op.idleTimer?.remove()
+        op.idleTimer = this.time.delayedCall(180, () => {
+          setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
+        })
       }
+      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
+      // Refresh avatar identity (pony or color) if it changed
+      const pony = normalizePonyKey(av.avatarCodigo)
+      if (pony !== op.pony) {
+        op.pony = pony
+        setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
+      }
+      op.body.setTint(colorHex)
     } else {
-      const body = this.add.circle(0, 0, 18, colorHex)
-      body.setStrokeStyle(2, 0xffffff)
-      const ponyEmoji = getPonyEmoji(av.avatarCodigo, av.color)
-      const face = this.add.text(0, -2, ponyEmoji, { fontSize: '16px' }).setOrigin(0.5)
-      const nameTag = this.add.text(0, 24, av.nombre, {
+      const pony = normalizePonyKey(av.avatarCodigo)
+      const body = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
+      const detail = this.add.sprite(0, -4, `pony-detail-${pony}-down-0`)
+      const nameTag = this.add.text(0, 26, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, face, nameTag]).setDepth(5)
-      this.otherPlayers.set(av.perfilId, { container, nameTag, perfilId: av.perfilId })
+      const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
+      this.otherPlayers.set(av.perfilId, {
+        container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
+      })
     }
   }
 
@@ -462,64 +594,140 @@ export class GameScene extends Phaser.Scene {
       this.powerText.setVisible(false)
     })
 
-    // Flash effect on player
-    this.tweens.add({ targets: this.playerBody, alpha: 0.3, duration: 100, yoyo: true, repeat: 5 })
+    // Flash effect on player (both sprite layers)
+    this.tweens.add({
+      targets: [this.playerBodySprite, this.playerDetailSprite],
+      alpha: 0.3, duration: 100, yoyo: true, repeat: 5,
+    })
   }
 
-  private showDialog(alimento: AlimentoResponse) {
+  private showInfoPanel(alimento: AlimentoResponse, forceShow = false) {
     if (this.dialogVisible) return
-    this.dialogVisible = true
+    this.lastFood = alimento
 
     const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
     const catColor = pwr?.color ? parseInt(pwr.color.replace('#', ''), 16) : 0x10b981
 
     // Dynamic banner — food category color
-    this.dialogBg.setStrokeStyle(3, catColor)
-    this.dialogTitleText.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
+    this.infoPanelBg.setStrokeStyle(3, catColor)
+    this.infoPanelTitle.setText(`${this.getFoodEmoji(alimento.categoria)} ${alimento.nombre}`)
 
     // Varied dialogue — use API descripcion + fun message
     const funMsg = this.getFunMessage(alimento.categoria, alimento.nombre)
     const desc = alimento.descripcion || 'Un alimento muy nutritivo y delicioso.'
-    this.dialogBodyText.setText(`${desc}\n\n${funMsg}`)
+    this.infoPanelBody.setText(`${desc}\n\n${funMsg}`)
 
     // Benefits with category-colored background
-    this.dialogBenefitsBg.setFillStyle(catColor, 0.2)
-    this.dialogBenefitsBg.setStrokeStyle(1, catColor)
-    this.dialogBenefitsText.setText(
+    this.infoPanelBenefitsBg.setFillStyle(catColor, 0.2)
+    this.infoPanelBenefitsBg.setStrokeStyle(1, catColor)
+    this.infoPanelBenefitsText.setText(
       `${pwr?.emoji || '✨'} Superpoder: ${pwr?.nombre || '?'}\n${pwr?.descripcion || ''}`
     )
 
-    // Category-colored close button
-    this.dialogCloseBtn.setFillStyle(catColor)
-    this.dialogCloseBtn.setStrokeStyle(2, 0x000000, 0.2)
+    // Category-colored eat button
+    this.infoPanelEatBtn.setFillStyle(catColor)
+    this.infoPanelEatBtn.setStrokeStyle(2, 0x000000, 0.2)
 
     // Sound
     soundManager.playCollect()
 
-    // Show all dialog elements
-    this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(true))
+    // Respect the player's manual-hide preference: refresh content but keep it hidden
+    if (this.infoPanelHiddenByUser && !forceShow) return
 
-    // Pop-in animation on the background
-    this.dialogBg.setScale(0.85)
+    this.infoPanelHiddenByUser = false
+    this.dialogVisible = true
+
+    this.layoutInfoPanel()
+    // Hide the floating toggle BEFORE capturing, so it never appears ghosted in the blur
+    this.infoToggleBtn.setVisible(false)
+    this.infoToggleBtnText.setVisible(false)
+    this.captureBlurOverlay()
+    this.showInfoPanelObjects(true)
+    this.animateInfoPanelSlide()
+  }
+
+  /** Captures the current view behind the panel: real blur (WebGL) or dark fallback (Canvas). */
+  private captureBlurOverlay() {
+    const cam = this.cameras.main
+    const W = this.scale.width
+    const H = this.scale.height
+
+    if (this.renderer.type === Phaser.WEBGL) {
+      // Real Gaussian blur via RenderTexture + postFX
+      if (this.blurOverlay.width !== W || this.blurOverlay.height !== H) {
+        this.blurOverlay.resize(W, H)
+      }
+      // Keep the overlay invisible while drawing so it is not captured into itself
+      this.blurOverlay.setVisible(false)
+      this.blurOverlay.camera.setScroll(cam.scrollX, cam.scrollY)
+      this.blurOverlay.clear()
+      this.blurOverlay.draw(this.children, 0, 0)
+      this.blurOverlay.setVisible(true).setAlpha(0)
+      this.tweens.add({ targets: this.blurOverlay, alpha: 1, duration: 250 })
+      this.blurFallback.setVisible(false)
+      this.infoPanelBg.setFillStyle(0x0f172a, 0.95)
+    } else {
+      // Fallback: postFX is WebGL-only, so darken the screen instead
+      this.blurFallback.setPosition(W / 2, H / 2).setSize(W, H)
+      this.blurFallback.setVisible(true).setAlpha(0)
+      this.tweens.add({ targets: this.blurFallback, alpha: 0.65, duration: 250 })
+      this.blurOverlay.setVisible(false)
+      this.infoPanelBg.setFillStyle(0x0f172a, 0.85)
+    }
+  }
+
+  /** Slides the panel up from the bottom edge with ease, then fades the text in. */
+  private animateInfoPanelSlide() {
+    // Distance each object must travel: from below the screen to its layout position.
+    // The layout Y positions differ per object, so we shift them down by `offset` and
+    // then tween back up with a RELATIVE '-=' value that preserves every object's offset.
+    const offset = this.scale.height + this.infoPanelHeight - this.infoPanelTargetY
+
+    this.infoPanelAnimObjects.forEach(o => { o.y += offset })
+    this.infoTextObjects.forEach(o => o.setAlpha(0))
+
     this.tweens.add({
-      targets: [this.dialogBg, this.dialogTitleText, this.dialogBodyText,
-                this.dialogBenefitsBg, this.dialogBenefitsText,
-                this.dialogCloseBtn, this.dialogCloseBtnText],
-      alpha: { from: 0, to: 1 },
-      duration: 200,
+      targets: this.infoPanelAnimObjects,
+      y: `-=${offset}`,
+      duration: 350,
+      ease: 'Back.easeOut',
     })
     this.tweens.add({
-      targets: this.dialogBg,
-      scaleX: 1, scaleY: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
+      targets: this.infoTextObjects,
+      alpha: 1,
+      delay: 350,
+      duration: 300,
     })
   }
 
-  private closeDialog() {
+  private showInfoPanelObjects(visible: boolean) {
+    this.infoPanelObjects.forEach(o => o.setVisible(visible))
+  }
+
+  private hideInfoPanel(userInitiated: boolean) {
+    if (!this.dialogVisible && !userInitiated) return
     this.dialogVisible = false
-    this.dialogObjects.forEach(o => (o as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(false))
+    if (userInitiated) this.infoPanelHiddenByUser = true
+
+    this.showInfoPanelObjects(false)
+    this.blurOverlay.setVisible(false)
+    this.blurFallback.setVisible(false)
+
+    if (this.infoPanelHiddenByUser) {
+      this.layoutInfoPanel()
+      this.infoToggleBtn.setVisible(true)
+      this.infoToggleBtnText.setVisible(true)
+    }
     soundManager.playClick()
+  }
+
+  /** Toggles the panel: hides it if visible, re-shows the last food if hidden by the player. */
+  private toggleInfoPanel() {
+    if (this.dialogVisible) {
+      this.hideInfoPanel(true)
+    } else if (this.infoPanelHiddenByUser && this.lastFood) {
+      this.showInfoPanel(this.lastFood, true)
+    }
   }
 
   private async collectFood(food: FoodSprite) {
@@ -531,6 +739,41 @@ export class GameScene extends Phaser.Scene {
 
     // Munch sound + collect animation
     soundManager.playMunch()
+
+    // Juice: squash & stretch before fly-off
+    this.tweens.add({ targets: food.container, scaleX: 1.35, scaleY: 0.6, duration: 70, yoyo: true })
+
+    // Juice: spark burst in the food's category color
+    const pwr = SUPERPODERS[food.alimento.categoria as keyof typeof SUPERPODERS]
+    const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
+    const burst = this.add.particles(food.container.x, food.container.y, 'spark', {
+      speed: { min: 90, max: 240 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.3, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 520,
+      quantity: 20,
+      tint: colorHex,
+      gravityY: 140,
+      emitting: false,
+    })
+    burst.explode(20)
+    this.time.delayedCall(620, () => burst.destroy())
+
+    // Juice: floating score popup
+    const popup = this.add.text(food.container.x, food.container.y - 24,
+      `+${food.alimento.puntosReward} 🪙`, {
+        fontSize: '16px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(150)
+    this.tweens.add({
+      targets: popup, y: popup.y - 56, alpha: 0, duration: 900, ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy(),
+    })
+
+    // Juice: subtle screen shake
+    this.cameras.main.shake(110, 0.003)
+
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
@@ -541,8 +784,8 @@ export class GameScene extends Phaser.Scene {
 
     this.tweens.add({ targets: this.scoreText, scaleX: 1.4, scaleY: 1.4, duration: 150, yoyo: true })
 
-    // Show dialog then register with backend
-    this.showDialog(food.alimento)
+    // Show info panel then register with backend
+    this.showInfoPanel(food.alimento)
     this.showPower(food.alimento.categoria)
 
     // Queue the consumption BEFORE the HTTP call so it survives tab close
@@ -590,20 +833,117 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.isPaused) return // Don't move when settings are open
 
+    // Toggle the info panel (I key) — independent of movement
+    if (Phaser.Input.Keyboard.JustDown(this.infoToggleKey)) this.toggleInfoPanel()
+
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
-    let dx = 0, dy = 0
-    let dir = 'idle'
+    let ix = 0, iy = 0
+    let dir: Facing = 'idle'
 
-    if (this.cursors.left.isDown || this.wasd.left.isDown) { dx = -speed; dir = 'left' }
-    else if (this.cursors.right.isDown || this.wasd.right.isDown) { dx = speed; dir = 'right' }
+    if (this.cursors.left.isDown || this.wasd.left.isDown) ix -= 1
+    if (this.cursors.right.isDown || this.wasd.right.isDown) ix += 1
+    if (this.cursors.up.isDown || this.wasd.up.isDown) iy -= 1
+    if (this.cursors.down.isDown || this.wasd.down.isDown) iy += 1
 
-    if (this.cursors.up.isDown || this.wasd.up.isDown) { dy = -speed; dir = 'up' }
-    else if (this.cursors.down.isDown || this.wasd.down.isDown) { dy = speed; dir = 'down' }
+    // Normalize diagonal input so it is not faster than axis-aligned
+    const inputLen = Math.hypot(ix, iy)
+    if (inputLen > 0) { ix /= inputLen; iy /= inputLen }
 
-    const newX = Phaser.Math.Clamp(this.player.x + dx * (delta / 1000), 24, MAP_COLS * TILE - 24)
-    const newY = Phaser.Math.Clamp(this.player.y + dy * (delta / 1000), 24, MAP_ROWS * TILE - 24)
+    if (ix < 0) dir = 'left'
+    else if (ix > 0) dir = 'right'
+    else if (iy < 0) dir = 'up'
+    else if (iy > 0) dir = 'down'
+
+    // Physics model: acceleration + exponential friction + velocity integration
+    this.velX += ix * PLAYER_ACCEL * (delta / 1000)
+    this.velY += iy * PLAYER_ACCEL * (delta / 1000)
+    if (ix === 0) this.velX *= Math.exp(-PLAYER_FRICTION * (delta / 1000))
+    if (iy === 0) this.velY *= Math.exp(-PLAYER_FRICTION * (delta / 1000))
+
+    // Clamp to max speed
+    const vLen = Math.hypot(this.velX, this.velY)
+    if (vLen > speed) {
+      this.velX = (this.velX / vLen) * speed
+      this.velY = (this.velY / vLen) * speed
+    }
+    // Kill drift below threshold
+    if (Math.abs(this.velX) < 2) this.velX = 0
+    if (Math.abs(this.velY) < 2) this.velY = 0
+
+    // Integrate position
+    const dt = delta / 1000
+    let newX = this.player.x + this.velX * dt
+    let newY = this.player.y + this.velY * dt
+    const maxX = MAP_COLS * TILE - 24
+    const maxY = MAP_ROWS * TILE - 24
+    if (newX < 24 || newX > maxX) this.velX = 0
+    if (newY < 24 || newY > maxY) this.velY = 0
+    newX = Phaser.Math.Clamp(newX, 24, maxX)
+    newY = Phaser.Math.Clamp(newY, 24, maxY)
+
+    // Resolve collisions against map obstacles (circle vs rect/circle, 3 passes)
+    const beforeX = this.player.x
+    const beforeY = this.player.y
+    const R = 18
+    for (let pass = 0; pass < 3; pass++) {
+      for (const o of this.obstacles) {
+        if (o.type === 'rect') {
+          const rw = o.w ?? 0
+          const rh = o.h ?? 0
+          const closestX = Phaser.Math.Clamp(newX, o.x, o.x + rw)
+          const closestY = Phaser.Math.Clamp(newY, o.y, o.y + rh)
+          const dx = newX - closestX
+          const dy = newY - closestY
+          const distSq = dx * dx + dy * dy
+          if (distSq < R * R) {
+            if (distSq === 0) {
+              const toL = newX - o.x
+              const toR = o.x + rw - newX
+              const toT = newY - o.y
+              const toB = o.y + rh - newY
+              const m = Math.min(toL, toR, toT, toB)
+              if (m === toL) newX = o.x - R
+              else if (m === toR) newX = o.x + rw + R
+              else if (m === toT) newY = o.y - R
+              else newY = o.y + rh + R
+            } else {
+              const dist = Math.sqrt(distSq)
+              const overlap = R - dist
+              newX += (dx / dist) * overlap
+              newY += (dy / dist) * overlap
+            }
+          }
+        } else {
+          const dx = newX - o.x
+          const dy = newY - o.y
+          const dist = Math.hypot(dx, dy)
+          const minDist = R + (o.r ?? 0)
+          if (dist < minDist && dist > 0) {
+            const overlap = minDist - dist
+            newX += (dx / dist) * overlap
+            newY += (dy / dist) * overlap
+          } else if (dist === 0) {
+            newX += minDist
+          }
+        }
+      }
+    }
+    // Re-clamp to world after push-out
+    newX = Phaser.Math.Clamp(newX, 24, maxX)
+    newY = Phaser.Math.Clamp(newY, 24, maxY)
+
+    // Kill velocity on axes where movement was blocked by an obstacle
+    if (Math.abs(newX - beforeX) < 0.5 && Math.abs(this.velX) > 0) this.velX = 0
+    if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
+
+    // Walk animation + facing (keeps last direction when idle)
+    if (dir !== 'idle') this.lastDir = dir
+    setPonyAnim(
+      this.playerBodySprite, this.playerDetailSprite, this.playerPony,
+      this.lastDir, dir !== 'idle',
+    )
 
     // Send move via WebSocket every 100ms regardless of movement (heartbeat)
     const now = Date.now()

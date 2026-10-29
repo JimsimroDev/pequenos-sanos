@@ -1,12 +1,13 @@
 import Phaser from 'phaser'
 import { COLORES_AVATARES } from '../../store/gameStore'
 import { soundManager } from '../SoundManager'
+import { ensurePonyTextures } from '../textures/PonyTextures'
 
 const PERSONAJES = [
-  { key: 'TWILIGHT', emoji: '🦄', nombre: 'Twilight Sparkle', frase: '¡La magia de la amistad y las frutas!', color: '#9333ea' },
-  { key: 'RAINBOW', emoji: '🌈', nombre: 'Rainbow Dash', frase: '¡Velocidad y verduras para volar alto!', color: '#2563eb' },
-  { key: 'FLUTTERSHY', emoji: '🦋', nombre: 'Fluttershy', frase: 'Las proteínas nos hacen fuertes y suaves', color: '#ec4899' },
-  { key: 'PINKIE', emoji: '🎉', nombre: 'Pinkie Pie', frase: '¡Fiestas con cereales y mucha risa!', color: '#db2777' },
+  { key: 'TWILIGHT', nombre: 'Twilight Sparkle', frase: '¡La magia de la amistad y las frutas!', color: '#9333ea' },
+  { key: 'RAINBOW', nombre: 'Rainbow Dash', frase: '¡Velocidad y verduras para volar alto!', color: '#2563eb' },
+  { key: 'FLUTTERSHY', nombre: 'Fluttershy', frase: 'Las proteínas nos hacen fuertes y suaves', color: '#ec4899' },
+  { key: 'PINKIE', nombre: 'Pinkie Pie', frase: '¡Fiestas con cereales y mucha risa!', color: '#db2777' },
 ]
 
 export interface CharacterSelectData {
@@ -26,6 +27,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   private selectedChar = 0
   private selectedColor = 0
   private charCards: Phaser.GameObjects.Container[] = []
+  private charBodies: Phaser.GameObjects.Sprite[] = []
   private colorDots: Phaser.GameObjects.Arc[] = []
 
   constructor() {
@@ -42,6 +44,8 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   create() {
+    ensurePonyTextures(this)
+
     const { width, height } = this.scale
     const bg = this.add.rectangle(0, 0, width, height, 0x0f172a)
     bg.setOrigin(0)
@@ -79,9 +83,10 @@ export class CharacterSelectScene extends Phaser.Scene {
       }).setOrigin(0.5)
     }
 
-    // Character cards — MLP ponies
+    // Character cards — MLP ponies rendered with the real animated sprites
     const cardW = 150, cardH = 195
     const startX = width / 2 - ((PERSONAJES.length - 1) * (cardW + 20)) / 2
+    const selectedTint = parseInt(COLORES_AVATARES[this.selectedColor].replace('#', ''), 16)
     this.charCards = PERSONAJES.map((p, i) => {
       const x = startX + i * (cardW + 20)
       const y = height / 2 - 40
@@ -92,18 +97,21 @@ export class CharacterSelectScene extends Phaser.Scene {
       const bg = this.add.rectangle(0, 0, cardW, cardH, i === this.selectedChar ? 0x065f46 : 0x1e293b, 1)
       bg.setStrokeStyle(3, i === this.selectedChar ? ponyColor : 0x334155)
 
-      // Colored circle with pony emoji
-      const ponyCircle = this.add.circle(0, -50, 28, ponyColor)
-      ponyCircle.setStrokeStyle(3, 0xffffff)
-      const emojiText = this.add.text(0, -50, p.emoji, { fontSize: '24px' }).setOrigin(0.5)
-      const nameText = this.add.text(0, -10, p.nombre, {
+      // Animated pony preview, tinted with the currently selected color
+      const body = this.add.sprite(0, -48, 'pony-body-down-0').setTint(selectedTint).setScale(1.7)
+      const detail = this.add.sprite(0, -48, `pony-detail-${p.key}-down-0`).setScale(1.7)
+      body.play('pony-body-walk-down')
+      detail.play(`pony-detail-walk-${p.key}-down`)
+      this.charBodies.push(body)
+
+      const nameText = this.add.text(0, 2, p.nombre, {
         fontSize: '13px', color: '#f0fdf4', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5)
-      const fraseText = this.add.text(0, 25, p.frase, {
+      const fraseText = this.add.text(0, 34, p.frase, {
         fontSize: '10px', color: '#cbd5e1', fontFamily: 'Arial', wordWrap: { width: cardW - 16 }, align: 'center',
       }).setOrigin(0.5)
 
-      container.add([bg, ponyCircle, emojiText, nameText, fraseText])
+      container.add([bg, body, detail, nameText, fraseText])
       container.setSize(cardW, cardH)
       container.setInteractive()
       container.on('pointerdown', () => this.selectChar(i))
@@ -166,6 +174,9 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.colorDots.forEach((dot, i) => {
       dot.setStrokeStyle(4, i === idx ? 0xffffff : 0x334155)
     })
+    // Re-tint every pony preview live so kids see their chosen color
+    const tint = parseInt(COLORES_AVATARES[idx].replace('#', ''), 16)
+    this.charBodies.forEach((s) => s.setTint(tint))
   }
 
   private startGame() {

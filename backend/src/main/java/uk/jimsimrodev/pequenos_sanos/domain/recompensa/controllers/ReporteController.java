@@ -10,8 +10,10 @@ import uk.jimsimrodev.pequenos_sanos.domain.auth.model.Usuario;
 import uk.jimsimrodev.pequenos_sanos.domain.consumo.repositories.IRegistroConsumoRepository;
 import uk.jimsimrodev.pequenos_sanos.domain.perfil.repositories.IPerfilInfantilRepository;
 import uk.jimsimrodev.pequenos_sanos.domain.recompensa.controllers.resource.ReporteResource;
+import uk.jimsimrodev.pequenos_sanos.domain.recompensa.dto.DatosReporteDashboard;
 import uk.jimsimrodev.pequenos_sanos.domain.recompensa.dto.DatosResumenDiario;
 import uk.jimsimrodev.pequenos_sanos.domain.recompensa.repositories.ITransaccionRecompensaRepository;
+import uk.jimsimrodev.pequenos_sanos.domain.recompensa.services.ReporteService;
 
 import java.time.LocalDate;
 
@@ -26,6 +28,7 @@ public class ReporteController implements ReporteResource {
         private final IPerfilInfantilRepository perfilRepository;
         private final IRegistroConsumoRepository consumoRepository;
         private final ITransaccionRecompensaRepository recompensaRepository;
+        private final ReporteService reporteService;
 
         /**
          * Creates the controller with required repositories.
@@ -33,13 +36,23 @@ public class ReporteController implements ReporteResource {
          * @param perfilRepository     child profile repository
          * @param consumoRepository    consumption record repository
          * @param recompensaRepository reward transaction repository
+         * @param reporteService       aggregate dashboard report service
          */
         public ReporteController(IPerfilInfantilRepository perfilRepository,
                         IRegistroConsumoRepository consumoRepository,
-                        ITransaccionRecompensaRepository recompensaRepository) {
+                        ITransaccionRecompensaRepository recompensaRepository,
+                        ReporteService reporteService) {
                 this.perfilRepository = perfilRepository;
                 this.consumoRepository = consumoRepository;
                 this.recompensaRepository = recompensaRepository;
+                this.reporteService = reporteService;
+        }
+
+        @Override
+        public ResponseEntity<DatosReporteDashboard> dashboard(
+                        @AuthenticationPrincipal Usuario usuario) {
+
+                return ResponseEntity.ok(reporteService.obtenerDashboardDelPadre(usuario.getId()));
         }
 
         @Override
