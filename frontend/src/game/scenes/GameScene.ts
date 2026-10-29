@@ -133,6 +133,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     MapRenderer.draw(this)
+    MapRenderer.animate(this)
     this.createPlayer()
     this.createControls()
     this.createHUD()
@@ -178,6 +179,24 @@ export class GameScene extends Phaser.Scene {
     }
     // Toggle key for the info panel — 'I' is free (not used for movement)
     this.infoToggleKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I)
+
+    // Touch/click-to-move: tap anywhere on the map to walk there (arrive steering)
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isPaused || this.dialogVisible) return
+      // Ignore taps on interactive UI (buttons, panel)
+      const hits = this.input.hitTestPointer(pointer)
+      if (hits.length > 0) return
+      const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+      this.targetX = Phaser.Math.Clamp(wp.x, 24, MAP_COLS * TILE - 24)
+      this.targetY = Phaser.Math.Clamp(wp.y, 24, MAP_ROWS * TILE - 24)
+      this.hasTarget = true
+      if (!this.targetMarker) {
+        this.targetMarker = this.add.circle(this.targetX, this.targetY, 12, 0xffffff, 0.45).setDepth(4)
+        this.tweens.add({ targets: this.targetMarker, scale: 1.7, alpha: 0.15, duration: 650, yoyo: true, repeat: -1 })
+      } else {
+        this.targetMarker.setPosition(this.targetX, this.targetY).setVisible(true).setAlpha(0.45).setScale(1)
+      }
+    })
   }
 
   private createHUD() {
@@ -856,22 +875,48 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.infoToggleKey)) this.toggleInfoPanel()
 
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
+    const kbX = (this.cursors.right.isDown || this.wasd.right.isDown ? 1 : 0) - (this.cursors.left.isDown || this.wasd.left.isDown ? 1 : 0)
+    const kbY = (this.cursors.down.isDown || this.wasd.down.isDown ? 1 : 0) - (this.cursors.up.isDown || this.wasd.up.isDown ? 1 : 0)
+
+    // Keyboard input cancels any touch target
+    if (kbX !== 0 || kbY !== 0) {
+      this.hasTarget = false
+      if (this.targetMarker) this.targetMarker.setVisible(false)
+    }
+
     let ix = 0, iy = 0
     let dir: Facing = 'idle'
 
-    if (this.cursors.left.isDown || this.wasd.left.isDown) ix -= 1
-    if (this.cursors.right.isDown || this.wasd.right.isDown) ix += 1
-    if (this.cursors.up.isDown || this.wasd.up.isDown) iy -= 1
-    if (this.cursors.down.isDown || this.wasd.down.isDown) iy += 1
-
-    // Normalize diagonal input so it is not faster than axis-aligned
-    const inputLen = Math.hypot(ix, iy)
-    if (inputLen > 0) { ix /= inputLen; iy /= inputLen }
-
-    if (ix < 0) dir = 'left'
-    else if (ix > 0) dir = 'right'
-    else if (iy < 0) dir = 'up'
-    else if (iy > 0) dir = 'down'
+    if (kbX !== 0 || kbY !== 0) {
+      ix = kbX; iy = kbY
+      const len = Math.hypot(ix, iy)
+      if (len > 0) { ix /= len; iy /= len }
+      if (ix < 0) dir = 'left'
+      else if (ix > 0) dir = 'right'
+      else if (iy < 0) dir = 'up'
+      else if (iy > 0) dir = 'down'
+    } else if (this.hasTarget) {
+      const dx = this.targetX - this.player.x
+      const dy = this.targetY - this.player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist < 10) {
+        // Arrived — stop
+        this.hasTarget = false
+        if (this.targetMarker) this.targetMarker.setVisible(false)
+        this.velX = 0
+        this.velY = 0
+      } else {
+        const nx = dx / dist
+        const ny = dy / dist
+        // Arrive steering: slow down near the target
+        const slowRadius = 90
+        const scale = dist < slowRadius ? dist / slowRadius : 1
+        ix = nx * scale
+        iy = ny * scale
+        if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left'
+        else dir = dy > 0 ? 'down' : 'up'
+      }
+    }
 
     // Physics model: acceleration + exponential friction + velocity integration
     this.velX += ix * PLAYER_ACCEL * (delta / 1000)
