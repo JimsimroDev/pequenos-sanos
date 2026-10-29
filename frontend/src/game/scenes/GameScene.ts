@@ -70,6 +70,12 @@ export class GameScene extends Phaser.Scene {
   private otherPlayers: Map<number, OtherPlayer> = new Map()
   private sceneData!: SceneData
   private lastMoveTime = 0
+  private lastStepTime = 0
+  // Touch/click-to-move target (steering 'arrive')
+  private hasTarget = false
+  private targetX = 0
+  private targetY = 0
+  private targetMarker: Phaser.GameObjects.Arc | null = null
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
@@ -101,6 +107,7 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text
   // Settings / pause
   private settingsBtn!: Phaser.GameObjects.Text
+  private muteBtn!: Phaser.GameObjects.Text
   private isPaused = false
   private pauseOverlay!: Phaser.GameObjects.Rectangle
 
@@ -121,6 +128,15 @@ export class GameScene extends Phaser.Scene {
     // Procedural pony sprites — idempotent, safe if BootScene already ran
     ensurePonyTextures(this)
 
+    // Spark texture for collect particles (idempotent)
+    if (!this.textures.exists('spark')) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff)
+      g.fillCircle(4, 4, 4)
+      g.generateTexture('spark', 8, 8)
+      g.destroy()
+    }
+
     MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
@@ -130,6 +146,10 @@ export class GameScene extends Phaser.Scene {
     this.createInfoPanel()
     this.spawnFoods()
     this.setupWebSocket()
+
+    // Start background music and reset step timer
+    soundManager.startMusic()
+    this.lastStepTime = 0
   }
 
   private createPlayer() {
@@ -163,6 +183,24 @@ export class GameScene extends Phaser.Scene {
     }
     // Toggle key for the info panel — 'I' is free (not used for movement)
     this.infoToggleKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I)
+
+    // Touch/click-to-move: tap anywhere on the map to walk there (arrive steering)
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isPaused || this.dialogVisible) return
+      // Ignore taps on interactive UI (buttons, panel)
+      const hits = this.input.hitTestPointer(pointer)
+      if (hits.length > 0) return
+      const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+      this.targetX = Phaser.Math.Clamp(wp.x, 24, MAP_COLS * TILE - 24)
+      this.targetY = Phaser.Math.Clamp(wp.y, 24, MAP_ROWS * TILE - 24)
+      this.hasTarget = true
+      if (!this.targetMarker) {
+        this.targetMarker = this.add.circle(this.targetX, this.targetY, 12, 0xffffff, 0.45).setDepth(4)
+        this.tweens.add({ targets: this.targetMarker, scale: 1.7, alpha: 0.15, duration: 650, yoyo: true, repeat: -1 })
+      } else {
+        this.targetMarker.setPosition(this.targetX, this.targetY).setVisible(true).setAlpha(0.45).setScale(1)
+      }
+    })
   }
 
   private createHUD() {
@@ -172,8 +210,21 @@ export class GameScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100)
   }
 
-  /** Creates the settings gear button and pause overlay */
+  /** Creates the settings gear button, mute button and pause overlay */
   private createSettingsUI() {
+    // Mute button (left of the gear)
+    this.muteBtn = this.add.text(this.scale.width - 60, 16, soundManager.isMuted() ? '🔇' : '🔊', {
+      fontSize: '22px',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(110)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        const m = soundManager.toggleMute()
+        this.muteBtn.setText(m ? '🔇' : '🔊')
+        soundManager.playClick()
+      })
+      .on('pointerover', () => this.muteBtn.setAlpha(0.7))
+      .on('pointerout', () => this.muteBtn.setAlpha(1))
+
     // Gear button in top-right corner
     this.settingsBtn = this.add.text(this.scale.width - 20, 16, '⚙️', {
       fontSize: '24px',
@@ -730,6 +781,41 @@ export class GameScene extends Phaser.Scene {
 
     // Munch sound + collect animation
     soundManager.playMunch()
+
+    // Juice: squash & stretch before fly-off
+    this.tweens.add({ targets: food.container, scaleX: 1.35, scaleY: 0.6, duration: 70, yoyo: true })
+
+    // Juice: spark burst in the food's category color
+    const pwr = SUPERPODERS[food.alimento.categoria as keyof typeof SUPERPODERS]
+    const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
+    const burst = this.add.particles(food.container.x, food.container.y, 'spark', {
+      speed: { min: 90, max: 240 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.3, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 520,
+      quantity: 20,
+      tint: colorHex,
+      gravityY: 140,
+      emitting: false,
+    })
+    burst.explode(20)
+    this.time.delayedCall(620, () => burst.destroy())
+
+    // Juice: floating score popup
+    const popup = this.add.text(food.container.x, food.container.y - 24,
+      `+${food.alimento.puntosReward} 🪙`, {
+        fontSize: '16px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(150)
+    this.tweens.add({
+      targets: popup, y: popup.y - 56, alpha: 0, duration: 900, ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy(),
+    })
+
+    // Juice: subtle screen shake
+    this.cameras.main.shake(110, 0.003)
+
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
@@ -793,22 +879,48 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.infoToggleKey)) this.toggleInfoPanel()
 
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
+    const kbX = (this.cursors.right.isDown || this.wasd.right.isDown ? 1 : 0) - (this.cursors.left.isDown || this.wasd.left.isDown ? 1 : 0)
+    const kbY = (this.cursors.down.isDown || this.wasd.down.isDown ? 1 : 0) - (this.cursors.up.isDown || this.wasd.up.isDown ? 1 : 0)
+
+    // Keyboard input cancels any touch target
+    if (kbX !== 0 || kbY !== 0) {
+      this.hasTarget = false
+      if (this.targetMarker) this.targetMarker.setVisible(false)
+    }
+
     let ix = 0, iy = 0
     let dir: Facing = 'idle'
 
-    if (this.cursors.left.isDown || this.wasd.left.isDown) ix -= 1
-    if (this.cursors.right.isDown || this.wasd.right.isDown) ix += 1
-    if (this.cursors.up.isDown || this.wasd.up.isDown) iy -= 1
-    if (this.cursors.down.isDown || this.wasd.down.isDown) iy += 1
-
-    // Normalize diagonal input so it is not faster than axis-aligned
-    const inputLen = Math.hypot(ix, iy)
-    if (inputLen > 0) { ix /= inputLen; iy /= inputLen }
-
-    if (ix < 0) dir = 'left'
-    else if (ix > 0) dir = 'right'
-    else if (iy < 0) dir = 'up'
-    else if (iy > 0) dir = 'down'
+    if (kbX !== 0 || kbY !== 0) {
+      ix = kbX; iy = kbY
+      const len = Math.hypot(ix, iy)
+      if (len > 0) { ix /= len; iy /= len }
+      if (ix < 0) dir = 'left'
+      else if (ix > 0) dir = 'right'
+      else if (iy < 0) dir = 'up'
+      else if (iy > 0) dir = 'down'
+    } else if (this.hasTarget) {
+      const dx = this.targetX - this.player.x
+      const dy = this.targetY - this.player.y
+      const dist = Math.hypot(dx, dy)
+      if (dist < 10) {
+        // Arrived — stop
+        this.hasTarget = false
+        if (this.targetMarker) this.targetMarker.setVisible(false)
+        this.velX = 0
+        this.velY = 0
+      } else {
+        const nx = dx / dist
+        const ny = dy / dist
+        // Arrive steering: slow down near the target
+        const slowRadius = 90
+        const scale = dist < slowRadius ? dist / slowRadius : 1
+        ix = nx * scale
+        iy = ny * scale
+        if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left'
+        else dir = dy > 0 ? 'down' : 'up'
+      }
+    }
 
     // Physics model: acceleration + exponential friction + velocity integration
     this.velX += ix * PLAYER_ACCEL * (delta / 1000)
@@ -894,6 +1006,15 @@ export class GameScene extends Phaser.Scene {
 
     this.player.setPosition(newX, newY)
 
+    // Step sound while moving
+    if (dir !== 'idle') {
+      const now = Date.now()
+      if (now - this.lastStepTime > 350) {
+        this.lastStepTime = now
+        soundManager.playStep()
+      }
+    }
+
     // Walk animation + facing (keeps last direction when idle)
     if (dir !== 'idle') this.lastDir = dir
     setPonyAnim(
@@ -923,6 +1044,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    soundManager.stopMusic()
     gameSocket.disconnect()
   }
 }
