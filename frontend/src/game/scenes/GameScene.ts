@@ -7,6 +7,7 @@ import { useGameStore } from '../../store/gameStore'
 import { useAuthStore } from '../../store/authStore'
 import { soundManager } from '../SoundManager'
 import { MapRenderer } from '../map/MapRenderer'
+import { MAP_OBSTACLES, MapObstacle } from '../map/MapRenderer'
 import { ensurePonyTextures, normalizePonyKey, setPonyAnim, PonyKey, Facing } from '../textures/PonyTextures'
 
 const TILE = 48
@@ -62,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private lastDir: Facing = 'down'
   private velX = 0
   private velY = 0
+  private obstacles: MapObstacle[] = MAP_OBSTACLES
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private foods: FoodSprite[] = []
@@ -825,14 +827,70 @@ export class GameScene extends Phaser.Scene {
     if (Math.abs(this.velY) < 2) this.velY = 0
 
     // Integrate position
-    let newX = this.player.x + this.velX * (delta / 1000)
-    let newY = this.player.y + this.velY * (delta / 1000)
+    const dt = delta / 1000
+    let newX = this.player.x + this.velX * dt
+    let newY = this.player.y + this.velY * dt
     const maxX = MAP_COLS * TILE - 24
     const maxY = MAP_ROWS * TILE - 24
     if (newX < 24 || newX > maxX) this.velX = 0
     if (newY < 24 || newY > maxY) this.velY = 0
     newX = Phaser.Math.Clamp(newX, 24, maxX)
     newY = Phaser.Math.Clamp(newY, 24, maxY)
+
+    // Resolve collisions against map obstacles (circle vs rect/circle, 3 passes)
+    const beforeX = this.player.x
+    const beforeY = this.player.y
+    const R = 18
+    for (let pass = 0; pass < 3; pass++) {
+      for (const o of this.obstacles) {
+        if (o.type === 'rect') {
+          const rw = o.w ?? 0
+          const rh = o.h ?? 0
+          const closestX = Phaser.Math.Clamp(newX, o.x, o.x + rw)
+          const closestY = Phaser.Math.Clamp(newY, o.y, o.y + rh)
+          const dx = newX - closestX
+          const dy = newY - closestY
+          const distSq = dx * dx + dy * dy
+          if (distSq < R * R) {
+            if (distSq === 0) {
+              const toL = newX - o.x
+              const toR = o.x + rw - newX
+              const toT = newY - o.y
+              const toB = o.y + rh - newY
+              const m = Math.min(toL, toR, toT, toB)
+              if (m === toL) newX = o.x - R
+              else if (m === toR) newX = o.x + rw + R
+              else if (m === toT) newY = o.y - R
+              else newY = o.y + rh + R
+            } else {
+              const dist = Math.sqrt(distSq)
+              const overlap = R - dist
+              newX += (dx / dist) * overlap
+              newY += (dy / dist) * overlap
+            }
+          }
+        } else {
+          const dx = newX - o.x
+          const dy = newY - o.y
+          const dist = Math.hypot(dx, dy)
+          const minDist = R + (o.r ?? 0)
+          if (dist < minDist && dist > 0) {
+            const overlap = minDist - dist
+            newX += (dx / dist) * overlap
+            newY += (dy / dist) * overlap
+          } else if (dist === 0) {
+            newX += minDist
+          }
+        }
+      }
+    }
+    // Re-clamp to world after push-out
+    newX = Phaser.Math.Clamp(newX, 24, maxX)
+    newY = Phaser.Math.Clamp(newY, 24, maxY)
+
+    // Kill velocity on axes where movement was blocked by an obstacle
+    if (Math.abs(newX - beforeX) < 0.5 && Math.abs(this.velX) > 0) this.velX = 0
+    if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
 

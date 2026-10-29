@@ -468,3 +468,44 @@ export class MapRenderer {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Collision obstacles (exported for GameScene) — buildings, water, fences.
+// Coordinates are in world space and match the drawn geometry above.
+// ---------------------------------------------------------------------------
+
+export interface MapObstacle {
+  type: 'rect' | 'circle'
+  x: number
+  y: number
+  w?: number
+  h?: number
+  r?: number
+}
+
+export const MAP_OBSTACLES: MapObstacle[] = [
+  // Farm
+  { type: 'rect', x: 250 - 90, y: 200 - 55 - 50, w: 180, h: 110 + 50 }, // barn + roof
+  { type: 'circle', x: 400, y: 170, r: 18 + 6 }, // silo
+  { type: 'circle', x: 480, y: 380, r: 42 + 4 }, // pond
+  { type: 'rect', x: 130 - 8, y: 150 - 40, w: 16, h: 40 }, // windmill
+  // Orchard
+  { type: 'rect', x: 900 - 90, y: 200 - 50 - 35, w: 180, h: 100 + 35 }, // greenhouse + roof
+  { type: 'rect', x: 720 - 20, y: 310 - 15, w: 40, h: 30 }, // compost
+  // Market
+  { type: 'rect', x: 280 - 40, y: 700 - 40, w: 80, h: 80 }, // stall 1
+  { type: 'rect', x: 120 - 40, y: 750 - 40, w: 80, h: 80 }, // stall 2
+  { type: 'rect', x: 420 - 40, y: 730 - 40, w: 80, h: 80 }, // stall 3
+  { type: 'rect', x: 200 - 40, y: 860 - 40, w: 80, h: 80 }, // stall 4
+  { type: 'rect', x: 80 - 35, y: 560 - 40, w: 70, h: 65 }, // market sign
+  // Picnic
+  { type: 'rect', x: 760 - 30, y: 620 - 8, w: 60, h: 48 }, // table 1
+  { type: 'rect', x: 940 - 30, y: 720 - 8, w: 60, h: 48 }, // table 2
+  { type: 'rect', x: 1090 - 30, y: 630 - 8, w: 60, h: 48 }, // table 3
+  { type: 'rect', x: 1050 - 20, y: 830 - 10, w: 40, h: 24 }, // bbq
+  // Pasture fence (4 segments)
+  { type: 'rect', x: 70 - 3, y: 320 - 6, w: 6, h: 440 + 12 }, // left
+  { type: 'rect', x: 330 - 3, y: 320 - 6, w: 6, h: 440 + 12 }, // right
+  { type: 'rect', x: 70 - 6, y: 320 - 3, w: 330 - 70 + 12, h: 6 }, // top
+  { type: 'rect', x: 70 - 6, y: 440 - 3, w: 330 - 70 + 12, h: 6 }, // bottom
+]
