@@ -13,6 +13,8 @@ const TILE = 48
 const MAP_COLS = 25
 const MAP_ROWS = 20
 const PLAYER_SPEED = 160
+const PLAYER_ACCEL = 1400
+const PLAYER_FRICTION = 10
 const FOOD_COUNT = 12
 const SUPERPODER_DURATION = 30000
 
@@ -58,6 +60,8 @@ export class GameScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text
   private playerPony: PonyKey = 'TWILIGHT'
   private lastDir: Facing = 'down'
+  private velX = 0
+  private velY = 0
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private foods: FoodSprite[] = []
@@ -787,14 +791,50 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.infoToggleKey)) this.toggleInfoPanel()
 
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
-    let dx = 0, dy = 0
+    let ix = 0, iy = 0
     let dir: Facing = 'idle'
 
-    if (this.cursors.left.isDown || this.wasd.left.isDown) { dx = -speed; dir = 'left' }
-    else if (this.cursors.right.isDown || this.wasd.right.isDown) { dx = speed; dir = 'right' }
+    if (this.cursors.left.isDown || this.wasd.left.isDown) ix -= 1
+    if (this.cursors.right.isDown || this.wasd.right.isDown) ix += 1
+    if (this.cursors.up.isDown || this.wasd.up.isDown) iy -= 1
+    if (this.cursors.down.isDown || this.wasd.down.isDown) iy += 1
 
-    if (this.cursors.up.isDown || this.wasd.up.isDown) { dy = -speed; dir = 'up' }
-    else if (this.cursors.down.isDown || this.wasd.down.isDown) { dy = speed; dir = 'down' }
+    // Normalize diagonal input so it is not faster than axis-aligned
+    const inputLen = Math.hypot(ix, iy)
+    if (inputLen > 0) { ix /= inputLen; iy /= inputLen }
+
+    if (ix < 0) dir = 'left'
+    else if (ix > 0) dir = 'right'
+    else if (iy < 0) dir = 'up'
+    else if (iy > 0) dir = 'down'
+
+    // Physics model: acceleration + exponential friction + velocity integration
+    this.velX += ix * PLAYER_ACCEL * (delta / 1000)
+    this.velY += iy * PLAYER_ACCEL * (delta / 1000)
+    if (ix === 0) this.velX *= Math.exp(-PLAYER_FRICTION * (delta / 1000))
+    if (iy === 0) this.velY *= Math.exp(-PLAYER_FRICTION * (delta / 1000))
+
+    // Clamp to max speed
+    const vLen = Math.hypot(this.velX, this.velY)
+    if (vLen > speed) {
+      this.velX = (this.velX / vLen) * speed
+      this.velY = (this.velY / vLen) * speed
+    }
+    // Kill drift below threshold
+    if (Math.abs(this.velX) < 2) this.velX = 0
+    if (Math.abs(this.velY) < 2) this.velY = 0
+
+    // Integrate position
+    let newX = this.player.x + this.velX * (delta / 1000)
+    let newY = this.player.y + this.velY * (delta / 1000)
+    const maxX = MAP_COLS * TILE - 24
+    const maxY = MAP_ROWS * TILE - 24
+    if (newX < 24 || newX > maxX) this.velX = 0
+    if (newY < 24 || newY > maxY) this.velY = 0
+    newX = Phaser.Math.Clamp(newX, 24, maxX)
+    newY = Phaser.Math.Clamp(newY, 24, maxY)
+
+    this.player.setPosition(newX, newY)
 
     // Walk animation + facing (keeps last direction when idle)
     if (dir !== 'idle') this.lastDir = dir
@@ -802,11 +842,6 @@ export class GameScene extends Phaser.Scene {
       this.playerBodySprite, this.playerDetailSprite, this.playerPony,
       this.lastDir, dir !== 'idle',
     )
-
-    const newX = Phaser.Math.Clamp(this.player.x + dx * (delta / 1000), 24, MAP_COLS * TILE - 24)
-    const newY = Phaser.Math.Clamp(this.player.y + dy * (delta / 1000), 24, MAP_ROWS * TILE - 24)
-
-    this.player.setPosition(newX, newY)
 
     // Send move via WebSocket every 100ms regardless of movement (heartbeat)
     const now = Date.now()
