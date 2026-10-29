@@ -7,6 +7,7 @@ import { useGameStore } from '../../store/gameStore'
 import { useAuthStore } from '../../store/authStore'
 import { soundManager } from '../SoundManager'
 import { MapRenderer } from '../map/MapRenderer'
+import { ensurePonyTextures, normalizePonyKey, setPonyAnim, PonyKey, Facing } from '../textures/PonyTextures'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -14,27 +15,6 @@ const MAP_ROWS = 20
 const PLAYER_SPEED = 160
 const FOOD_COUNT = 12
 const SUPERPODER_DURATION = 30000
-
-/** Map avatar codes to their pony emoji and color */
-const PONY_EMOJIS: Record<string, string> = {
-  TWILIGHT: '🦄', RAINBOW: '🌈', FLUTTERSHY: '🦋', PINKIE: '🎉',
-  EXPLORER: '🧭', CHEF: '👨‍🍳', ATHLETE: '🏃', SCIENTIST: '🔬',
-}
-const PONY_COLORS: Record<string, string> = {
-  TWILIGHT: '#9333ea', RAINBOW: '#2563eb', FLUTTERSHY: '#ec4899', PINKIE: '#db2777',
-  EXPLORER: '#ef4444', CHEF: '#f59e0b', ATHLETE: '#3b82f6', SCIENTIST: '#10b981',
-}
-
-/** Derive a pony emoji from color or avatarCodigo */
-function getPonyEmoji(avatarCodigo?: string, color?: string): string {
-  if (avatarCodigo && PONY_EMOJIS[avatarCodigo]) return PONY_EMOJIS[avatarCodigo]
-  if (color) {
-    // Fallback: map color back to pony
-    const match = Object.entries(PONY_COLORS).find(([, c]) => c === color)
-    if (match) return PONY_EMOJIS[match[0]] || '🦄'
-  }
-  return '🦄'
-}
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
@@ -46,6 +26,11 @@ interface OtherPlayer {
   container: Phaser.GameObjects.Container
   nameTag: Phaser.GameObjects.Text
   perfilId: number
+  body: Phaser.GameObjects.Sprite
+  detail: Phaser.GameObjects.Sprite
+  pony: PonyKey
+  lastDir: Facing
+  idleTimer?: Phaser.Time.TimerEvent
 }
 
 interface SceneData {
@@ -68,8 +53,11 @@ interface ScreenObject extends Phaser.GameObjects.GameObject {
  */
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Container
-  private playerBody!: Phaser.GameObjects.Arc
+  private playerBodySprite!: Phaser.GameObjects.Sprite
+  private playerDetailSprite!: Phaser.GameObjects.Sprite
   private playerLabel!: Phaser.GameObjects.Text
+  private playerPony: PonyKey = 'TWILIGHT'
+  private lastDir: Facing = 'down'
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>
   private foods: FoodSprite[] = []
@@ -124,6 +112,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, mapW, mapH)
     this.physics.world.setBounds(0, 0, mapW, mapH)
 
+    // Procedural pony sprites — idempotent, safe if BootScene already ran
+    ensurePonyTextures(this)
+
     MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
@@ -139,20 +130,20 @@ export class GameScene extends Phaser.Scene {
     const cx = (MAP_COLS * TILE) / 2
     const cy = (MAP_ROWS * TILE) / 2
     const colorHex = parseInt(this.sceneData.avatarColor.replace('#', ''), 16)
+    this.playerPony = normalizePonyKey(this.sceneData.avatarCodigo)
 
-    // Avatar emoji based on selected MLP pony character
-    const avatarEmoji = getPonyEmoji(this.sceneData.avatarCodigo, this.sceneData.avatarColor)
+    // Procedural pony: tintable body layer + fixed-color detail layer (mane, eyes, cutie mark)
+    this.playerBodySprite = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
+    this.playerDetailSprite = this.add.sprite(0, -4, `pony-detail-${this.playerPony}-down-0`)
 
-    this.playerBody = this.add.circle(0, 0, 20, colorHex)
-    this.playerBody.setStrokeStyle(3, 0xffffff)
-
-    const face = this.add.text(0, -2, avatarEmoji, { fontSize: '20px' }).setOrigin(0.5)
-    this.playerLabel = this.add.text(0, 28, this.sceneData.nombrePerfil, {
+    this.playerLabel = this.add.text(0, 26, this.sceneData.nombrePerfil, {
       fontSize: '12px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
-    this.player = this.add.container(cx, cy, [this.playerBody, face, this.playerLabel]).setDepth(5)
+    this.player = this.add.container(cx, cy, [
+      this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
+    ]).setDepth(5)
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
   }
 
@@ -534,23 +525,39 @@ export class GameScene extends Phaser.Scene {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
-      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
-      // Update avatar emoji if it changed
-      const existingFace = op.container.list[1] as Phaser.GameObjects.Text
-      if (existingFace && av.avatarCodigo) {
-        const newEmoji = getPonyEmoji(av.avatarCodigo, av.color)
-        if (existingFace.text !== newEmoji) existingFace.setText(newEmoji)
+      // Animate based on the movement delta before tweening to the new position
+      const dx = av.x - op.container.x
+      const dy = av.y - op.container.y
+      if (Math.abs(dx) + Math.abs(dy) > 2) {
+        const dir: Facing = Math.abs(dx) > Math.abs(dy)
+          ? (dx > 0 ? 'right' : 'left')
+          : (dy > 0 ? 'down' : 'up')
+        op.lastDir = dir
+        setPonyAnim(op.body, op.detail, op.pony, dir, true)
+        op.idleTimer?.remove()
+        op.idleTimer = this.time.delayedCall(180, () => {
+          setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
+        })
       }
+      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
+      // Refresh avatar identity (pony or color) if it changed
+      const pony = normalizePonyKey(av.avatarCodigo)
+      if (pony !== op.pony) {
+        op.pony = pony
+        setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
+      }
+      op.body.setTint(colorHex)
     } else {
-      const body = this.add.circle(0, 0, 18, colorHex)
-      body.setStrokeStyle(2, 0xffffff)
-      const ponyEmoji = getPonyEmoji(av.avatarCodigo, av.color)
-      const face = this.add.text(0, -2, ponyEmoji, { fontSize: '16px' }).setOrigin(0.5)
-      const nameTag = this.add.text(0, 24, av.nombre, {
+      const pony = normalizePonyKey(av.avatarCodigo)
+      const body = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
+      const detail = this.add.sprite(0, -4, `pony-detail-${pony}-down-0`)
+      const nameTag = this.add.text(0, 26, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, face, nameTag]).setDepth(5)
-      this.otherPlayers.set(av.perfilId, { container, nameTag, perfilId: av.perfilId })
+      const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
+      this.otherPlayers.set(av.perfilId, {
+        container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
+      })
     }
   }
 
@@ -572,8 +579,11 @@ export class GameScene extends Phaser.Scene {
       this.powerText.setVisible(false)
     })
 
-    // Flash effect on player
-    this.tweens.add({ targets: this.playerBody, alpha: 0.3, duration: 100, yoyo: true, repeat: 5 })
+    // Flash effect on player (both sprite layers)
+    this.tweens.add({
+      targets: [this.playerBodySprite, this.playerDetailSprite],
+      alpha: 0.3, duration: 100, yoyo: true, repeat: 5,
+    })
   }
 
   private showInfoPanel(alimento: AlimentoResponse, forceShow = false) {
@@ -778,13 +788,20 @@ export class GameScene extends Phaser.Scene {
 
     const speed = this.activePower === 'FRUTA' ? PLAYER_SPEED * 1.6 : PLAYER_SPEED
     let dx = 0, dy = 0
-    let dir = 'idle'
+    let dir: Facing = 'idle'
 
     if (this.cursors.left.isDown || this.wasd.left.isDown) { dx = -speed; dir = 'left' }
     else if (this.cursors.right.isDown || this.wasd.right.isDown) { dx = speed; dir = 'right' }
 
     if (this.cursors.up.isDown || this.wasd.up.isDown) { dy = -speed; dir = 'up' }
     else if (this.cursors.down.isDown || this.wasd.down.isDown) { dy = speed; dir = 'down' }
+
+    // Walk animation + facing (keeps last direction when idle)
+    if (dir !== 'idle') this.lastDir = dir
+    setPonyAnim(
+      this.playerBodySprite, this.playerDetailSprite, this.playerPony,
+      this.lastDir, dir !== 'idle',
+    )
 
     const newX = Phaser.Math.Clamp(this.player.x + dx * (delta / 1000), 24, MAP_COLS * TILE - 24)
     const newY = Phaser.Math.Clamp(this.player.y + dy * (delta / 1000), 24, MAP_ROWS * TILE - 24)
