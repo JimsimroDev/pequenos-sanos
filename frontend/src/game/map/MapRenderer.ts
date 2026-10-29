@@ -467,6 +467,91 @@ export class MapRenderer {
       label.setDepth(4)
     }
   }
+
+  static animate(scene: Phaser.Scene): void {
+    // Windmill blades spinning
+    const blades = scene.add.graphics()
+    blades.fillStyle(0xd4a574)
+    for (let i = 0; i < 4; i++) {
+      blades.fillRect(-3, -46, 6, 46)
+    }
+    blades.fillStyle(0x8b5e3c)
+    blades.fillCircle(0, 0, 6)
+    blades.setPosition(130, 130)
+    blades.setDepth(3)
+    scene.tweens.add({
+      targets: blades, angle: 360, duration: 3500, repeat: -1, ease: 'Linear',
+    })
+
+    // Pond ripples
+    for (let i = 0; i < 3; i++) {
+      const ripple = scene.add.circle(480, 380, 8, 0x6baaf0, 0)
+      ripple.setStrokeStyle(2, 0x6baaf0, 0.6)
+      ripple.setDepth(2)
+      scene.tweens.add({
+        targets: ripple, scale: 5, alpha: 0, duration: 2600,
+        delay: i * 850, repeat: -1, ease: 'Sine.easeOut',
+        onRepeat: (t: any) => { t.targets[0].setScale(0.1).setAlpha(0.6) },
+      })
+    }
+
+    // Chimney smoke from the barn
+    if (!scene.textures.exists('smoke')) {
+      const g = scene.add.graphics()
+      g.fillStyle(0xffffff)
+      g.fillCircle(4, 4, 4)
+      g.generateTexture('smoke', 8, 8)
+      g.destroy()
+    }
+    const smoke = scene.add.particles(250, 95, 'smoke', {
+      speed: { min: 10, max: 35 },
+      angle: { min: 250, max: 290 },
+      scale: { start: 0.6, end: 1.6 },
+      alpha: { start: 0.5, end: 0 },
+      lifespan: 2200,
+      frequency: 280,
+      tint: 0xcccccc,
+    })
+    smoke.setDepth(4)
+
+    // Drifting clouds
+    const cloudDefs = [
+      { y: 60, speed: 26000, scale: 1.0 },
+      { y: 110, speed: 34000, scale: 0.8 },
+      { y: 40, speed: 42000, scale: 1.2 },
+    ]
+    cloudDefs.forEach((c) => {
+      const cloud = scene.add.graphics()
+      cloud.fillStyle(0xffffff, 0.7)
+      cloud.fillCircle(0, 0, 18 * c.scale)
+      cloud.fillCircle(16 * c.scale, -6 * c.scale, 14 * c.scale)
+      cloud.fillCircle(-16 * c.scale, -4 * c.scale, 13 * c.scale)
+      cloud.fillCircle(30 * c.scale, 2 * c.scale, 12 * c.scale)
+      cloud.setPosition(-80, c.y)
+      cloud.setDepth(1)
+      scene.tweens.add({
+        targets: cloud, x: 1280, duration: c.speed, repeat: -1, ease: 'Linear',
+        onRepeat: (t: any) => { t.targets[0].x = -80 },
+      })
+    })
+
+    // Swaying grass tufts
+    const tufts = [
+      { x: 50, y: 50 }, { x: 150, y: 80 }, { x: 550, y: 50 },
+      { x: 700, y: 50 }, { x: 50, y: 400 }, { x: 800, y: 500 },
+    ]
+    tufts.forEach((t, i) => {
+      const g = scene.add.graphics()
+      g.fillStyle(0x5ca83a)
+      g.fillTriangle(0, -6, -4, 0, 4, 0)
+      g.setPosition(t.x, t.y)
+      g.setDepth(2)
+      scene.tweens.add({
+        targets: g, angle: 8, duration: 1200 + i * 120,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 150,
+      })
+    })
+  }
 }
 
 // ---------------------------------------------------------------------------
