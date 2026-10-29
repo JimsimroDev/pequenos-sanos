@@ -121,6 +121,15 @@ export class GameScene extends Phaser.Scene {
     // Procedural pony sprites — idempotent, safe if BootScene already ran
     ensurePonyTextures(this)
 
+    // Spark texture for collect particles (idempotent)
+    if (!this.textures.exists('spark')) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff)
+      g.fillCircle(4, 4, 4)
+      g.generateTexture('spark', 8, 8)
+      g.destroy()
+    }
+
     MapRenderer.draw(this)
     this.createPlayer()
     this.createControls()
@@ -730,6 +739,41 @@ export class GameScene extends Phaser.Scene {
 
     // Munch sound + collect animation
     soundManager.playMunch()
+
+    // Juice: squash & stretch before fly-off
+    this.tweens.add({ targets: food.container, scaleX: 1.35, scaleY: 0.6, duration: 70, yoyo: true })
+
+    // Juice: spark burst in the food's category color
+    const pwr = SUPERPODERS[food.alimento.categoria as keyof typeof SUPERPODERS]
+    const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
+    const burst = this.add.particles(food.container.x, food.container.y, 'spark', {
+      speed: { min: 90, max: 240 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.3, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 520,
+      quantity: 20,
+      tint: colorHex,
+      gravityY: 140,
+      emitting: false,
+    })
+    burst.explode(20)
+    this.time.delayedCall(620, () => burst.destroy())
+
+    // Juice: floating score popup
+    const popup = this.add.text(food.container.x, food.container.y - 24,
+      `+${food.alimento.puntosReward} 🪙`, {
+        fontSize: '16px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(150)
+    this.tweens.add({
+      targets: popup, y: popup.y - 56, alpha: 0, duration: 900, ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy(),
+    })
+
+    // Juice: subtle screen shake
+    this.cameras.main.shake(110, 0.003)
+
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
