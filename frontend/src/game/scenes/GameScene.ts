@@ -9,6 +9,7 @@ import { soundManager } from '../SoundManager'
 import { MapRenderer } from '../map/MapRenderer'
 import { MAP_OBSTACLES, MapObstacle } from '../map/MapRenderer'
 import { ensurePonyTextures, normalizePonyKey, setPonyAnim, PonyKey, Facing } from '../textures/PonyTextures'
+import { ensureFoodTextures, foodTextureKey } from '../textures/FoodTextures'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -21,8 +22,13 @@ const SUPERPODER_DURATION = 30000
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
+  body: Phaser.GameObjects.Sprite
   alimento: AlimentoResponse
   collected: boolean
+  vx: number
+  vy: number
+  wanderTimer: number
+  flee: boolean
 }
 
 interface OtherPlayer {
@@ -122,6 +128,9 @@ export class GameScene extends Phaser.Scene {
 
     // Procedural pony sprites — idempotent, safe if BootScene already ran
     ensurePonyTextures(this)
+
+    // Food sprites (idempotent)
+    ensureFoodTextures(this)
 
     // Spark texture for collect particles (idempotent)
     if (!this.textures.exists('spark')) {
@@ -447,23 +456,30 @@ export class GameScene extends Phaser.Scene {
       selected.forEach((alimento) => {
         const x = Phaser.Math.Between(80, mapW - 80)
         const y = Phaser.Math.Between(80, mapH - 80)
-        const pwr = SUPERPODERS[alimento.categoria]
-        const colorHex = parseInt(pwr.color.replace('#', ''), 16)
+        const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
+        const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
-        const glow = this.add.circle(0, 0, 32, colorHex, 0.25)
-        const body = this.add.circle(0, 0, 22, colorHex)
-        body.setStrokeStyle(2, 0xffffff)
-        const emoji = this.add.text(0, -2, this.getFoodEmoji(alimento.categoria), { fontSize: '20px' }).setOrigin(0.5)
+        const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
+        const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
         const label = this.add.text(0, 30, alimento.nombre, {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
+        const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
 
-        this.tweens.add({ targets: glow, scaleX: 1.3, scaleY: 1.3, alpha: 0.1, duration: 1000, yoyo: true, repeat: -1 })
-        this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 600 })
+        this.tweens.add({ targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.08, duration: 1100, yoyo: true, repeat: -1 })
+        this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 700 })
+        this.tweens.add({ targets: body, angle: { from: -6, to: 6 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
-        this.foods.push({ container, alimento, collected: false })
+        // Wander behaviour: small random velocity, changes direction every ~2s
+        const ang = Math.random() * Math.PI * 2
+        const spd = 12 + Math.random() * 18
+        this.foods.push({
+          container, body, alimento, collected: false,
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          wanderTimer: 1500 + Math.random() * 1500,
+          flee: alimento.categoria === 'FRUTA',
+        })
       })
     } catch (e) {
       console.error('Error al cargar alimentos:', e)
@@ -850,21 +866,28 @@ export class GameScene extends Phaser.Scene {
       const x = Phaser.Math.Between(80, mapW - 80)
       const y = Phaser.Math.Between(80, mapH - 80)
       const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
-      const colorHex = parseInt(pwr.color.replace('#', ''), 16)
+      const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
-      const glow = this.add.circle(0, 0, 32, colorHex, 0.25)
-      const body = this.add.circle(0, 0, 22, colorHex)
-      body.setStrokeStyle(2, 0xffffff)
-      const emoji = this.add.text(0, -2, this.getFoodEmoji(alimento.categoria), { fontSize: '20px' }).setOrigin(0.5)
+      const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
+      const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
       const label = this.add.text(0, 30, alimento.nombre, {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
+      const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
-      this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-      this.foods.push({ container, alimento, collected: false })
+      this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({ targets: body, angle: { from: -6, to: 6 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+      const ang = Math.random() * Math.PI * 2
+      const spd = 12 + Math.random() * 18
+      this.foods.push({
+        container, body, alimento, collected: false,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        wanderTimer: 1500 + Math.random() * 1500,
+        flee: alimento.categoria === 'FRUTA',
+      })
     } catch { /* ignore */ }
   }
 
@@ -1024,6 +1047,39 @@ export class GameScene extends Phaser.Scene {
       this.lastMoveTime = now
       gameSocket.sendMove(this.sceneData.perfilId, this.sceneData.nombrePerfil, newX, newY, dir)
     }
+
+    // Move foods (wander + flee from player)
+    const mapW = MAP_COLS * TILE
+    const mapH = MAP_ROWS * TILE
+    this.foods.forEach((food) => {
+      if (food.collected) return
+      // flee if player is close and food is a fruit
+      if (food.flee) {
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y)
+        if (d < 120 && d > 0) {
+          const fx = (food.container.x - this.player.x) / d
+          const fy = (food.container.y - this.player.y) / d
+          food.vx = fx * 60
+          food.vy = fy * 60
+        }
+      }
+      // wander timer
+      food.wanderTimer -= delta
+      if (food.wanderTimer <= 0) {
+        food.wanderTimer = 1500 + Math.random() * 1500
+        if (!food.flee || Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y) > 120) {
+          const ang = Math.random() * Math.PI * 2
+          const spd = 12 + Math.random() * 18
+          food.vx = Math.cos(ang) * spd
+          food.vy = Math.sin(ang) * spd
+        }
+      }
+      // integrate
+      food.container.x = Phaser.Math.Clamp(food.container.x + food.vx * (delta / 1000), 60, mapW - 60)
+      food.container.y = Phaser.Math.Clamp(food.container.y + food.vy * (delta / 1000), 60, mapH - 60)
+      if (food.container.x <= 60 || food.container.x >= mapW - 60) food.vx *= -1
+      if (food.container.y <= 60 || food.container.y >= mapH - 60) food.vy *= -1
+    })
 
     // Check food collisions
     const COLLECT_RADIUS = 40
