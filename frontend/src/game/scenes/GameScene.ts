@@ -87,6 +87,11 @@ export class GameScene extends Phaser.Scene {
   private lastStepTime = 0
   private camOffsetX = 0
   private camOffsetY = 0
+  // Progression + combo state
+  private combo = 0
+  private lastCollectTime = 0
+  private sessionStart = 0
+  private comboText!: Phaser.GameObjects.Text
   // Touch/click-to-move target (steering 'arrive')
   private hasTarget = false
   private targetX = 0
@@ -136,6 +141,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.sessionStart = Date.now()
     const mapW = MAP_COLS * TILE
     const mapH = MAP_ROWS * TILE
     this.cameras.main.setBounds(0, 0, mapW, mapH)
@@ -232,6 +238,10 @@ export class GameScene extends Phaser.Scene {
     this.scoreText = this.add.text(16, 16, '🪙 0', {
       fontSize: '20px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#065f46', strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(100)
+    this.comboText = this.add.text(16, 44, '', {
+      fontSize: '14px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
     }).setScrollFactor(0).setDepth(100)
   }
 
@@ -500,7 +510,7 @@ export class GameScene extends Phaser.Scene {
 
         // Wander behaviour: small random velocity, changes direction every ~2s
         const ang = Math.random() * Math.PI * 2
-        const spd = 12 + Math.random() * 18
+        const spd = (12 + Math.random() * 18) * this.getDifficulty()
         this.foods.push({
           container, body, alimento, collected: false,
           vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
@@ -875,10 +885,22 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
-    // Score
-    this.score += food.alimento.puntosReward
+    // Combo: consecutive collects within 4s multiply the reward
+    const now = Date.now()
+    if (now - this.lastCollectTime < 4000 && this.lastCollectTime > 0) {
+      this.combo = Math.min(this.combo + 1, 5)
+    } else {
+      this.combo = 1
+    }
+    this.lastCollectTime = now
+    const mult = this.combo
+
+    // Score (with combo multiplier)
+    this.score += food.alimento.puntosReward * mult
     this.scoreText.setText(`🪙 ${this.score}`)
     useGameStore.getState().setSaldo(this.score)
+    this.comboText.setText(mult > 1 ? `x${mult} combo!` : '')
+    this.tweens.add({ targets: this.comboText, scaleX: 1.3, scaleY: 1.3, duration: 120, yoyo: true })
 
     this.tweens.add({ targets: this.scoreText, scaleX: 1.4, scaleY: 1.4, duration: 150, yoyo: true })
 
@@ -1136,8 +1158,9 @@ export class GameScene extends Phaser.Scene {
         if (d < 120 && d > 0) {
           const fx = (food.container.x - this.player.x) / d
           const fy = (food.container.y - this.player.y) / d
-          food.vx = fx * 60
-          food.vy = fy * 60
+          const fleeSpeed = 60 * this.getDifficulty()
+          food.vx = fx * fleeSpeed
+          food.vy = fy * fleeSpeed
         }
       }
       // wander timer
@@ -1146,7 +1169,7 @@ export class GameScene extends Phaser.Scene {
         food.wanderTimer = 1500 + Math.random() * 1500
         if (!food.flee || Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y) > 120) {
           const ang = Math.random() * Math.PI * 2
-          const spd = 12 + Math.random() * 18
+          const spd = (12 + Math.random() * 18) * this.getDifficulty()
           food.vx = Math.cos(ang) * spd
           food.vy = Math.sin(ang) * spd
         }
@@ -1170,6 +1193,12 @@ export class GameScene extends Phaser.Scene {
         this.collectFood(food)
       }
     })
+  }
+
+  /** Difficulty scales with session time: 1.0 at start, +0.15 per minute, capped at 2.5. */
+  private getDifficulty(): number {
+    const minutes = (Date.now() - this.sessionStart) / 60000
+    return Math.min(2.5, 1 + minutes * 0.15)
   }
 
   /** Poisson-disc-ish distribution: returns `count` points in [pad..w-pad]x[pad..h-pad] at least `minDist` apart. */
