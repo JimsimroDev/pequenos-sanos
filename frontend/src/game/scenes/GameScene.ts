@@ -183,7 +183,9 @@ export class GameScene extends Phaser.Scene {
     this.player = this.add.container(cx, cy, [
       this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
     ]).setDepth(5)
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
+    // Camera feel: deadzone + smoother lerp + dynamic lookahead (updated in update())
+    this.cameras.main.setDeadzone(90, 70)
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
   }
 
   private createControls() {
