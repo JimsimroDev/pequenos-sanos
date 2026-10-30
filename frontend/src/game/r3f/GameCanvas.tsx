@@ -1,6 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { Suspense } from 'react'
+import { Sparkles } from '@react-three/drei'
 import { GameScene3D } from './GameScene3D'
+import { DayNightLight } from './DayNightLight'
 
 interface GameCanvasProps {
   perfilId: number
@@ -24,21 +26,12 @@ export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avata
         style={{ width: '100%', height: '100%' }}
       >
         <Suspense fallback={null}>
-          {/* Lighting */}
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[10, 15, 5]}
-            intensity={1.2}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-            shadow-camera-far={50}
-            shadow-camera-left={-20}
-            shadow-camera-right={20}
-            shadow-camera-top={20}
-            shadow-camera-bottom={-20}
-          />
+          {/* Dynamic day/night lighting */}
+          <DayNightLight />
           <hemisphereLight args={['#87ceeb', '#7ec850', 0.4]} />
+
+          {/* Ambient dust particles */}
+          <Sparkles count={60} scale={[60, 5, 60]} size={2} speed={0.3} opacity={0.4} color="#ffffff" />
 
           {/* Game scene (terrain, buildings, trees, player, food, movement) */}
           <GameScene3D

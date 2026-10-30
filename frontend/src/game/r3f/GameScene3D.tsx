@@ -3,9 +3,11 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Player } from './Player'
 import { FoodItem } from './Food'
+import { Sparkles } from '@react-three/drei'
 import { Terrain } from './Terrain'
 import { Buildings } from './Buildings'
 import { Trees } from './Trees'
+import { Water } from './Water'
 
 // Obstacle AABBs in XZ plane (same as Phaser, scaled to 3D units: 1 tile = 1 unit)
 const OBSTACLES: { x: number; z: number; w: number; h: number }[] = [
@@ -44,6 +46,7 @@ export function GameScene3D({ color, name, onCollect }: GameScene3DProps) {
 
   const [collected, setCollected] = useState<Set<number>>(new Set())
   const [score, setScore] = useState(0)
+  const [confettiPos, setConfettiPos] = useState<[number, number, number] | null>(null)
 
   // Keyboard input
   useEffect(() => {
@@ -154,6 +157,9 @@ export function GameScene3D({ color, name, onCollect }: GameScene3DProps) {
         setCollected((prev) => new Set(prev).add(idx))
         setScore((s) => s + 10)
         onCollect?.(10)
+        // Confetti burst
+        setConfettiPos([fp[0], 1, fp[2]])
+        setTimeout(() => setConfettiPos(null), 1200)
       }
     })
   })
@@ -163,6 +169,20 @@ export function GameScene3D({ color, name, onCollect }: GameScene3DProps) {
       <Terrain />
       <Buildings />
       <Trees />
+      <Water position={[8, 0, 3]} />
+
+      {/* Confetti on collect */}
+      {confettiPos && (
+        <Sparkles
+          count={40}
+          scale={[2, 2, 2]}
+          size={4}
+          speed={1.5}
+          opacity={1}
+          color="#ffd93d"
+          position={confettiPos}
+        />
+      )}
 
       {/* Food items */}
       {FOOD_POSITIONS.map((pos, idx) => (
