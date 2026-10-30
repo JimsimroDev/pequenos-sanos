@@ -87,6 +87,7 @@ export class GameScene extends Phaser.Scene {
   private lastStepTime = 0
   private camOffsetX = 0
   private camOffsetY = 0
+  private breathingTween: Phaser.Tweens.Tween | null = null
   // Progression + combo state
   private combo = 0
   private lastCollectTime = 0
@@ -950,6 +951,17 @@ export class GameScene extends Phaser.Scene {
     // Juice: subtle screen shake
     this.cameras.main.shake(110, 0.003)
 
+    // Celebration: jump + spin on the player
+    this.tweens.add({
+      targets: this.player,
+      y: this.player.y - 18,
+      angle: 360,
+      duration: 320,
+      yoyo: true,
+      ease: 'Cubic.easeOut',
+      onComplete: () => { this.player.angle = 0 },
+    })
+
     // Reward: confetti burst (multi-color)
     const confettiColors = [0xffd93d, 0xff6b6b, 0x60a5fa, 0x34d399, 0xf472b6, 0xa78bfa]
     const confetti = this.add.particles(food.container.x, food.container.y, 'spark', {
@@ -1269,6 +1281,26 @@ export class GameScene extends Phaser.Scene {
       this.playerBodySprite, this.playerDetailSprite, this.playerPony,
       this.lastDir, dir !== 'idle',
     )
+
+    // Breathing idle animation
+    if (dir === 'idle') {
+      if (!this.breathingTween || !this.breathingTween.isPlaying()) {
+        this.breathingTween = this.tweens.add({
+          targets: this.player,
+          scaleY: 1.03,
+          duration: 900,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
+      }
+    } else {
+      if (this.breathingTween) {
+        this.breathingTween.stop()
+        this.breathingTween = null
+        this.player.setScale(1, 1)
+      }
+    }
 
     // Send move via WebSocket every 100ms regardless of movement (heartbeat)
     const now = Date.now()
