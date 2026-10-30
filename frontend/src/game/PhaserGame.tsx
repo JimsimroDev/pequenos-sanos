@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
+import { StartScene } from './scenes/StartScene'
 import { CharacterSelectScene } from './scenes/CharacterSelectScene'
 import { GameScene } from './scenes/GameScene'
 import { EndScene } from './scenes/EndScene'
@@ -64,7 +65,7 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
         default: 'arcade',
         arcade: { gravity: { x: 0, y: 0 }, debug: false },
       },
-      scene: [BootScene, new CharacterSelectScene(), GameScene, EndScene],
+      scene: [BootScene, StartScene, new CharacterSelectScene(), GameScene, EndScene],
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -78,8 +79,8 @@ export default function PhaserGame({ perfilId, nombrePerfil, avatarCodigo, onExi
 
     game.events.once('ready', () => {
       if (hasExistingAvatar) {
-        // Skip character select — go straight to game
-        game.scene.start('GameScene', sceneData)
+        // Show the splash (name, coins, play button) before entering the game
+        game.scene.start('StartScene', sceneData)
       } else {
         game.scene.start('CharacterSelectScene', sceneData)
       }
