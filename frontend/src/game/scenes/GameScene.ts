@@ -85,18 +85,6 @@ export class GameScene extends Phaser.Scene {
   private sceneData!: SceneData
   private lastMoveTime = 0
   private lastStepTime = 0
-  private camOffsetX = 0
-  private camOffsetY = 0
-  // Progression + combo state
-  private combo = 0
-  private lastCollectTime = 0
-  private sessionStart = 0
-  private comboText!: Phaser.GameObjects.Text
-  // Touch/click-to-move target (steering 'arrive')
-  private hasTarget = false
-  private targetX = 0
-  private targetY = 0
-  private targetMarker: Phaser.GameObjects.Arc | null = null
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerTrail: Phaser.GameObjects.Particles.ParticleEmitter | null = null
@@ -1166,39 +1154,6 @@ export class GameScene extends Phaser.Scene {
     if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
-
-    // Camera lookahead: offset in the direction of travel
-    const vlen = Math.hypot(this.velX, this.velY)
-    const targetOx = vlen > 5 ? (this.velX / vlen) * 70 : 0
-    const targetOy = vlen > 5 ? (this.velY / vlen) * 50 : 0
-    this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
-    this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
-    this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
-
-    // Day/night cycle: tint based on session time (0-10 min)
-    if (this.dayNightOverlay) {
-      const minutes = (Date.now() - this.sessionStart) / 60000
-      const t = Math.min(1, minutes / 10) // 0..1 over 10 min
-      // Interpolate color: day (transparent) -> sunset (warm orange) -> night (blue)
-      let r = 0, g = 0, b = 0, a = 0
-      if (t < 0.5) {
-        // day -> sunset
-        const u = t / 0.5
-        r = Math.round(0 + u * 255)
-        g = Math.round(0 + u * 140)
-        b = Math.round(0 + u * 40)
-        a = 0 + u * 0.18
-      } else {
-        // sunset -> night
-        const u = (t - 0.5) / 0.5
-        r = Math.round(255 - u * 200)
-        g = Math.round(140 - u * 100)
-        b = Math.round(40 + u * 80)
-        a = 0.18 + u * 0.22
-      }
-      const color = (r << 16) | (g << 8) | b
-      this.dayNightOverlay.setFillStyle(color, a)
-    }
 
     // Interpolate remote players (dead reckoning + exponential lerp)
     const nowMs = Date.now()
