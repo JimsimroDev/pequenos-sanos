@@ -20,7 +20,7 @@ interface GameCanvasProps {
  */
 export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avatarColor, onExit }: GameCanvasProps) {
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', background: '#0f172a' }}>
       <Canvas
         shadows
         camera={{ position: [0, 8, 12], fov: 50, near: 0.1, far: 200 }}
