@@ -164,6 +164,8 @@ export class GameScene extends Phaser.Scene {
       g.destroy()
     }
 
+    this.createParallaxLayers()
+
     MapRenderer.draw(this)
     MapRenderer.animate(this)
     this.createPlayer()
@@ -178,6 +180,44 @@ export class GameScene extends Phaser.Scene {
     // Start background music and reset step timer
     soundManager.startMusic()
     this.lastStepTime = 0
+  }
+
+  /** Parallax sky layers: clouds at different scroll speeds behind the map. */
+  private createParallaxLayers() {
+    const W = MAP_COLS * TILE
+    const H = MAP_ROWS * TILE
+    // Far sky (very slow)
+    const far = this.add.graphics().setScrollFactor(0.05).setDepth(-3)
+    far.fillStyle(0x93c5fd, 0.35)
+    for (let i = 0; i < 6; i++) {
+      const cx = (i * 260) % W
+      const cy = 40 + (i % 3) * 30
+      far.fillCircle(cx, cy, 40)
+      far.fillCircle(cx + 30, cy - 10, 30)
+      far.fillCircle(cx - 20, cy + 5, 26)
+    }
+    // Mid clouds
+    const mid = this.add.graphics().setScrollFactor(0.2).setDepth(-2)
+    mid.fillStyle(0xffffff, 0.55)
+    const midClouds = [{ x: 120, y: 80 }, { x: 420, y: 50 }, { x: 760, y: 90 }, { x: 1040, y: 60 }]
+    midClouds.forEach((c) => {
+      mid.fillCircle(c.x, c.y, 28)
+      mid.fillCircle(c.x + 24, c.y - 8, 22)
+      mid.fillCircle(c.x - 20, c.y + 4, 20)
+      mid.fillCircle(c.x + 44, c.y + 2, 18)
+    })
+    // Near clouds (faster)
+    const near = this.add.graphics().setScrollFactor(0.45).setDepth(-1)
+    near.fillStyle(0xffffff, 0.7)
+    const nearClouds = [{ x: 200, y: 120 }, { x: 600, y: 70 }, { x: 950, y: 140 }]
+    nearClouds.forEach((c) => {
+      near.fillCircle(c.x, c.y, 36)
+      near.fillCircle(c.x + 30, c.y - 10, 28)
+      near.fillCircle(c.x - 24, c.y + 6, 24)
+    })
+    // Drift tweens for mid/near clouds
+    this.tweens.add({ targets: mid, x: 60, duration: 28000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.tweens.add({ targets: near, x: 40, duration: 18000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
 
   private createPlayer() {
