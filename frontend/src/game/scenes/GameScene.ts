@@ -171,6 +171,28 @@ export class GameScene extends Phaser.Scene {
     MapRenderer.draw(this)
     MapRenderer.animate(this)
 
+    // Ambient dust particles (subtle life)
+    if (!this.textures.exists('dust')) {
+      const g = this.add.graphics()
+      g.fillStyle(0xffffff)
+      g.fillCircle(2, 2, 2)
+      g.generateTexture('dust', 4, 4)
+      g.destroy()
+    }
+    const dust = this.add.particles(0, 0, 'dust', {
+      x: { min: 0, max: MAP_COLS * TILE },
+      y: { min: 0, max: MAP_ROWS * TILE },
+      speed: { min: 2, max: 8 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.25, end: 0 },
+      lifespan: 6000,
+      frequency: 350,
+      quantity: 1,
+      tint: 0xffffff,
+    })
+    dust.setDepth(3)
+
     // Day/night overlay (tint based on session time)
     this.dayNightOverlay = this.add.rectangle(0, 0, MAP_COLS * TILE, MAP_ROWS * TILE, 0x000000, 0)
       .setOrigin(0, 0).setDepth(50).setScrollFactor(1)
