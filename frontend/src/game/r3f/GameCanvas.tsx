@@ -1,10 +1,6 @@
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
 import { Suspense } from 'react'
-import { Terrain } from './Terrain'
-import { Buildings } from './Buildings'
-import { Trees } from './Trees'
-import { Player } from './Player'
+import { GameScene3D } from './GameScene3D'
 
 interface GameCanvasProps {
   perfilId: number
@@ -44,20 +40,14 @@ export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avata
           />
           <hemisphereLight args={['#87ceeb', '#7ec850', 0.4]} />
 
-          {/* Terrain */}
-          <Terrain />
+          {/* Game scene (terrain, buildings, trees, player, food, movement) */}
+          <GameScene3D
+            color={avatarColor}
+            name={nombrePerfil}
+            onCollect={(pts) => console.log('Collected', pts)}
+          />
 
-          {/* Buildings */}
-          <Buildings />
-
-          {/* Trees */}
-          <Trees />
-
-          {/* Player */}
-          <Player color={avatarColor} name={nombrePerfil} position={[0, 0, 0]} />
-
-          {/* Orbit controls for debugging (remove in production) */}
-          <OrbitControls enablePan={false} enableZoom={false} maxPolarAngle={Math.PI / 2.5} minPolarAngle={Math.PI / 4} />
+          {/* Camera is now controlled by GameScene3D (follows player) */}
         </Suspense>
       </Canvas>
 
