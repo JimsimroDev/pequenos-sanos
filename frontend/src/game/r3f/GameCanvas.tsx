@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { Suspense } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { Sparkles } from '@react-three/drei'
 import { GameScene3D } from './GameScene3D'
 import { DayNightLight } from './DayNightLight'
@@ -18,6 +18,13 @@ interface GameCanvasProps {
  * For now, coexists with Phaser; swap is the last step.
  */
 export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avatarColor, onExit }: GameCanvasProps) {
+  const [fadeIn, setFadeIn] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setFadeIn(false), 100)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', background: '#0f172a' }}>
       <Canvas
@@ -44,13 +51,57 @@ export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avata
         </Suspense>
       </Canvas>
 
-      {/* HUD overlay (React) */}
-      <div style={{ position: 'absolute', top: 16, left: 16, color: 'white', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+      {/* Fade-in overlay */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: '#0f172a',
+          opacity: fadeIn ? 1 : 0,
+          transition: 'opacity 0.8s ease-out',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      />
+
+      {/* HUD overlay (React) — glassmorphism */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          color: 'white',
+          fontWeight: 'bold',
+          textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: 12,
+          padding: '8px 16px',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
         🪙 0
       </div>
       <button
         onClick={onExit}
-        style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(8px)',
+          color: 'white',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 12,
+          padding: '8px 16px',
+          cursor: 'pointer',
+          fontWeight: 'bold',
+          transition: 'transform 0.15s ease, background 0.15s ease',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+        onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.95)' }}
+        onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.05)' }}
       >
         ✕
       </button>
