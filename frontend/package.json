@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-spring/three": "^10.1.2",
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.8.2",
+    "@react-spring/three": "^9.7.5",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@rollup/rollup-linux-x64-gnu": "^4.62.3",
     "@stomp/stompjs": "^7.0.0",
     "axios": "^1.7.9",

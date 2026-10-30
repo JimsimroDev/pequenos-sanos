@@ -7,7 +7,8 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import NewProfilePage from './pages/NewProfilePage'
 import GameWrapper from './pages/GameWrapper'
-import GameWrapper3D from './pages/GameWrapper3D'
+import { lazy, Suspense } from 'react'
+const GameWrapper3D = lazy(() => import('./pages/GameWrapper3D'))
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const token = useAuthStore((s) => s.token)
@@ -39,7 +40,7 @@ export default function App() {
         />
         <Route
           path="/game3d/:perfilId"
-          element={<RequireAuth><GameWrapper3D /></RequireAuth>}
+          element={<RequireAuth><Suspense fallback={<div style={{color:'white',padding:20}}>Cargando 3D...</div>}><GameWrapper3D /></Suspense></RequireAuth>}
         />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
