@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { Terrain } from './Terrain'
 import { Buildings } from './Buildings'
 import { Trees } from './Trees'
+import { Player } from './Player'
 
 interface GameCanvasProps {
   perfilId: number
@@ -51,6 +52,9 @@ export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avata
 
           {/* Trees */}
           <Trees />
+
+          {/* Player */}
+          <Player color={avatarColor} name={nombrePerfil} position={[0, 0, 0]} />
 
           {/* Orbit controls for debugging (remove in production) */}
           <OrbitControls enablePan={false} enableZoom={false} maxPolarAngle={Math.PI / 2.5} minPolarAngle={Math.PI / 4} />
