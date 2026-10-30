@@ -85,6 +85,8 @@ export class GameScene extends Phaser.Scene {
   private sceneData!: SceneData
   private lastMoveTime = 0
   private lastStepTime = 0
+  private camOffsetX = 0
+  private camOffsetY = 0
   // Touch/click-to-move target (steering 'arrive')
   private hasTarget = false
   private targetX = 0
@@ -188,7 +190,9 @@ export class GameScene extends Phaser.Scene {
     this.player = this.add.container(cx, cy, [
       this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
     ]).setDepth(5)
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
+    // Camera feel: deadzone + smoother lerp + dynamic lookahead (updated in update())
+    this.cameras.main.setDeadzone(90, 70)
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
   }
 
   private createControls() {
@@ -1066,6 +1070,14 @@ export class GameScene extends Phaser.Scene {
     if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
+
+    // Camera lookahead: offset in the direction of travel
+    const vlen = Math.hypot(this.velX, this.velY)
+    const targetOx = vlen > 5 ? (this.velX / vlen) * 70 : 0
+    const targetOy = vlen > 5 ? (this.velY / vlen) * 50 : 0
+    this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
+    this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
+    this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
 
     // Interpolate remote players (dead reckoning + exponential lerp)
     const nowMs = Date.now()
