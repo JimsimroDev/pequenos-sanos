@@ -101,6 +101,7 @@ export class GameScene extends Phaser.Scene {
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerTrail: Phaser.GameObjects.Particles.ParticleEmitter | null = null
   private powerGlow: Phaser.GameObjects.Arc | null = null
+  private dayNightOverlay: Phaser.GameObjects.Rectangle | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
   private powerText!: Phaser.GameObjects.Text
   // Info panel (right-side drawer) — replaces the old centered modal
@@ -168,6 +169,11 @@ export class GameScene extends Phaser.Scene {
 
     MapRenderer.draw(this)
     MapRenderer.animate(this)
+
+    // Day/night overlay (tint based on session time)
+    this.dayNightOverlay = this.add.rectangle(0, 0, MAP_COLS * TILE, MAP_ROWS * TILE, 0x000000, 0)
+      .setOrigin(0, 0).setDepth(50).setScrollFactor(1)
+
     this.createPlayer()
     this.createControls()
     this.createHUD()
@@ -1168,6 +1174,31 @@ export class GameScene extends Phaser.Scene {
     this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
     this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
     this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
+
+    // Day/night cycle: tint based on session time (0-10 min)
+    if (this.dayNightOverlay) {
+      const minutes = (Date.now() - this.sessionStart) / 60000
+      const t = Math.min(1, minutes / 10) // 0..1 over 10 min
+      // Interpolate color: day (transparent) -> sunset (warm orange) -> night (blue)
+      let r = 0, g = 0, b = 0, a = 0
+      if (t < 0.5) {
+        // day -> sunset
+        const u = t / 0.5
+        r = Math.round(0 + u * 255)
+        g = Math.round(0 + u * 140)
+        b = Math.round(0 + u * 40)
+        a = 0 + u * 0.18
+      } else {
+        // sunset -> night
+        const u = (t - 0.5) / 0.5
+        r = Math.round(255 - u * 200)
+        g = Math.round(140 - u * 100)
+        b = Math.round(40 + u * 80)
+        a = 0.18 + u * 0.22
+      }
+      const color = (r << 16) | (g << 8) | b
+      this.dayNightOverlay.setFillStyle(color, a)
+    }
 
     // Interpolate remote players (dead reckoning + exponential lerp)
     const nowMs = Date.now()
