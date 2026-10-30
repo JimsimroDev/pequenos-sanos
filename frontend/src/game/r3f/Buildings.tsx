@@ -12,7 +12,7 @@ function Barn({ position }: { position: [number, number, number] }) {
       {/* Main body */}
       <mesh castShadow receiveShadow position={[0, 1.5, 0]}>
         <boxGeometry args={[3.6, 3, 2.2]} />
-        <meshStandardMaterial color="#cc3333" roughness={0.8} />
+        <meshStandardMaterial color="#b83a30" roughness={0.8} />
       </mesh>
       {/* Roof */}
       <mesh castShadow position={[0, 3.5, 0]}>
@@ -38,7 +38,7 @@ function Greenhouse({ position }: { position: [number, number, number] }) {
     <group position={position}>
       <mesh castShadow receiveShadow position={[0, 1, 0]}>
         <boxGeometry args={[3.6, 2, 2]} />
-        <meshStandardMaterial color="#a8e6a8" roughness={0.3} transparent opacity={0.85} />
+        <meshStandardMaterial color="#95d495" roughness={0.3} transparent opacity={0.85} />
       </mesh>
       <mesh castShadow position={[0, 2.3, 0]}>
         <coneGeometry args={[2.2, 0.8, 4]} />

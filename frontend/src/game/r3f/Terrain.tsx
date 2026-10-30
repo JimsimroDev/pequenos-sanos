@@ -18,7 +18,7 @@ export function Terrain() {
     <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
       <planeGeometry args={[60, 60, 32, 32]} />
       <meshStandardMaterial
-        color="#7ec850"
+        color="#6aab4a"
         roughness={0.95}
         metalness={0.0}
       />

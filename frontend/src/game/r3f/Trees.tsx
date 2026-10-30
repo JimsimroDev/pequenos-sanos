@@ -20,15 +20,15 @@ function Tree({ position, size = 1 }: { position: [number, number, number]; size
       {/* Canopy layers */}
       <mesh castShadow position={[0, size * 1.6, 0]}>
         <sphereGeometry args={[size * 0.7, 8, 6]} />
-        <meshStandardMaterial color="#2d8a2d" roughness={0.8} />
+        <meshStandardMaterial color="#3a7d32" roughness={0.8} />
       </mesh>
       <mesh castShadow position={[-0.2 * size, size * 1.8, 0.1 * size]}>
         <sphereGeometry args={[size * 0.5, 8, 6]} />
-        <meshStandardMaterial color="#3da33d" roughness={0.8} />
+        <meshStandardMaterial color="#4a8f42" roughness={0.8} />
       </mesh>
       <mesh castShadow position={[0.15 * size, size * 1.9, -0.1 * size]}>
         <sphereGeometry args={[size * 0.4, 8, 6]} />
-        <meshStandardMaterial color="#1e6b1e" roughness={0.8} />
+        <meshStandardMaterial color="#2d6b2d" roughness={0.8} />
       </mesh>
     </group>
   )

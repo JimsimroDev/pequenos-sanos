@@ -35,7 +35,7 @@ export default function GameCanvas({ perfilId, nombrePerfil, avatarCodigo, avata
         <Suspense fallback={null}>
           {/* Dynamic day/night lighting */}
           <DayNightLight />
-          <hemisphereLight args={['#87ceeb', '#7ec850', 0.4]} />
+          <hemisphereLight args={['#8ec8e8', '#6aab4a', 0.4]} />
 
           {/* Ambient dust particles */}
           <Sparkles count={60} scale={[60, 5, 60]} size={2} speed={0.3} opacity={0.4} color="#ffffff" />
