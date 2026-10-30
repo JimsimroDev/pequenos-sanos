@@ -87,6 +87,8 @@ export class GameScene extends Phaser.Scene {
   private lastStepTime = 0
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
+  private powerTrail: Phaser.GameObjects.Particles.ParticleEmitter | null = null
+  private powerGlow: Phaser.GameObjects.Arc | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
   private powerText!: Phaser.GameObjects.Text
   // Info panel (right-side drawer) — replaces the old centered modal
@@ -683,11 +685,31 @@ export class GameScene extends Phaser.Scene {
 
     soundManager.playPowerUp()
 
+    // Trail + glow while the power is active
+    const colorHex = parseInt((pwr.color).replace('#', ''), 16)
+    if (this.powerTrail) { this.powerTrail.destroy(); this.powerTrail = null }
+    if (this.powerGlow) { this.powerGlow.destroy(); this.powerGlow = null }
+    this.powerGlow = this.add.circle(this.player.x, this.player.y, 38, colorHex, 0.25).setDepth(4)
+    this.tweens.add({ targets: this.powerGlow, scale: 1.3, alpha: 0.08, duration: 500, yoyo: true, repeat: -1 })
+    this.powerTrail = this.add.particles(0, 0, 'spark', {
+      follow: this.player,
+      speed: { min: 0, max: 20 },
+      scale: { start: 1.0, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      lifespan: 350,
+      frequency: 40,
+      tint: colorHex,
+      emitting: true,
+    })
+    this.powerTrail.setDepth(4)
+
     if (this.powerTimer) this.powerTimer.remove()
     this.powerTimer = this.time.delayedCall(SUPERPODER_DURATION, () => {
       this.activePower = null
       this.powerOverlay.setVisible(false)
       this.powerText.setVisible(false)
+      if (this.powerTrail) { this.powerTrail.destroy(); this.powerTrail = null }
+      if (this.powerGlow) { this.powerGlow.destroy(); this.powerGlow = null }
     })
 
     // Flash effect on player (both sprite layers)
