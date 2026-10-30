@@ -360,6 +360,9 @@ export class MapRenderer {
     g.fillCircle(250, 350, 10)
     g.fillCircle(270, 355, 8)
     g.fillCircle(300, 340, 11)
+    g.fillCircle(120, 400, 9)
+    g.fillCircle(180, 380, 7)
+    g.fillCircle(320, 400, 8)
 
     // ── Orchard trees ──
     drawTree(g, 780, 100, 55)
@@ -394,6 +397,9 @@ export class MapRenderer {
     g.fillCircle(700, 650, 12)
     g.fillCircle(720, 655, 10)
     g.fillCircle(1100, 700, 11)
+    g.fillCircle(600, 600, 9)
+    g.fillCircle(850, 760, 10)
+    g.fillCircle(1000, 650, 8)
   }
 
   // ── Layer 4: Fine decorations ──
@@ -448,22 +454,24 @@ export class MapRenderer {
 
   // ── Zone labels (Text at depth 4) ──
   private static drawLabels(scene: Phaser.Scene): void {
-    const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '16px',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }
     const labels: { x: number; y: number; text: string }[] = [
-      { x: 200, y: 30, text: '🐄 Granja' },
-      { x: 900, y: 30, text: '🌱 Huerta' },
-      { x: 200, y: 510, text: '🏪 Mercado' },
-      { x: 900, y: 510, text: '🧺 Picnic' },
+      { x: 200, y: 34, text: '🐄 Granja' },
+      { x: 900, y: 34, text: '🌱 Huerta' },
+      { x: 200, y: 514, text: '🏪 Mercado' },
+      { x: 900, y: 514, text: '🧺 Picnic' },
     ]
     for (const { x, y, text } of labels) {
-      const label = scene.add.text(x, y, text, style).setOrigin(0.5)
+      // Readable pill background
+      const bg = scene.add.rectangle(x, y, text.length * 11 + 24, 30, 0x000000, 0.45)
+      bg.setDepth(4)
+      const label = scene.add.text(x, y, text, {
+        fontSize: '18px',
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 5,
+      }).setOrigin(0.5)
       label.setDepth(4)
     }
   }
