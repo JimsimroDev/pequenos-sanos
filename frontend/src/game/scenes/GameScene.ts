@@ -1064,14 +1064,6 @@ export class GameScene extends Phaser.Scene {
 
     this.player.setPosition(newX, newY)
 
-    // Camera lookahead: offset in the direction of travel
-    const vlen = Math.hypot(this.velX, this.velY)
-    const targetOx = vlen > 5 ? (this.velX / vlen) * 70 : 0
-    const targetOy = vlen > 5 ? (this.velY / vlen) * 50 : 0
-    this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
-    this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
-    this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
-
     // Interpolate remote players (dead reckoning + exponential lerp)
     const nowMs = Date.now()
     this.otherPlayers.forEach((op) => {
