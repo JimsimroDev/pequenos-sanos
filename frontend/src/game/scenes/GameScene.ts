@@ -85,18 +85,6 @@ export class GameScene extends Phaser.Scene {
   private sceneData!: SceneData
   private lastMoveTime = 0
   private lastStepTime = 0
-  private camOffsetX = 0
-  private camOffsetY = 0
-  // Progression + combo state
-  private combo = 0
-  private lastCollectTime = 0
-  private sessionStart = 0
-  private comboText!: Phaser.GameObjects.Text
-  // Touch/click-to-move target (steering 'arrive')
-  private hasTarget = false
-  private targetX = 0
-  private targetY = 0
-  private targetMarker: Phaser.GameObjects.Arc | null = null
   private activePower: string | null = null
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
@@ -1098,14 +1086,6 @@ export class GameScene extends Phaser.Scene {
     if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
-
-    // Camera lookahead: offset in the direction of travel
-    const vlen = Math.hypot(this.velX, this.velY)
-    const targetOx = vlen > 5 ? (this.velX / vlen) * 70 : 0
-    const targetOy = vlen > 5 ? (this.velY / vlen) * 50 : 0
-    this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
-    this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
-    this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
 
     // Interpolate remote players (dead reckoning + exponential lerp)
     const nowMs = Date.now()
