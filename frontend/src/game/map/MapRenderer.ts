@@ -98,6 +98,24 @@ function drawTree(g: Phaser.GameObjects.Graphics, x: number, y: number, size: nu
   g.fillCircle(x + size * 0.12, y - size * 0.58, size * 0.12)
 }
 
+function drawPine(g: Phaser.GameObjects.Graphics, x: number, y: number, size: number): void {
+  // Shadow
+  g.fillStyle(0x000000, 0.18)
+  g.fillEllipse(x, y + 4, size * 0.7, size * 0.25)
+  // Trunk
+  g.fillStyle(TRUNK)
+  g.fillRect(x - 3, y - size * 0.1, 6, size * 0.3)
+  // Conical canopy layers
+  g.fillStyle(CANOPY_DARK)
+  g.fillTriangle(x - size * 0.45, y, x + size * 0.45, y, x, y - size * 1.1)
+  g.fillStyle(CANOPY_1)
+  g.fillTriangle(x - size * 0.38, y - size * 0.15, x + size * 0.38, y - size * 0.15, x, y - size * 0.95)
+  g.fillStyle(CANOPY_2)
+  g.fillTriangle(x - size * 0.3, y - size * 0.3, x + size * 0.3, y - size * 0.3, x, y - size * 0.8)
+  g.fillStyle(CANOPY_3)
+  g.fillTriangle(x - size * 0.2, y - size * 0.45, x + size * 0.2, y - size * 0.45, x, y - size * 0.65)
+}
+
 function drawBarn(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
   const hw = BARN_W / 2, hh = BARN_H / 2
   // Shadow
@@ -235,6 +253,9 @@ function drawPond(g: Phaser.GameObjects.Graphics, x: number, y: number, r: numbe
   g.fillCircle(x - r * 0.15, y - r * 0.1, r * 0.78)
   g.fillStyle(FOUNTAIN)
   g.fillCircle(x - r * 0.25, y - r * 0.2, r * 0.45)
+  // Sky reflection
+  g.fillStyle(0x8ec8e8, 0.25)
+  g.fillCircle(x + r * 0.1, y - r * 0.3, r * 0.35)
   // Edge grass
   g.fillStyle(GRASS_DARK)
   for (let a = 0; a < 360; a += 30) {
@@ -306,6 +327,18 @@ export class MapRenderer {
     g.fillRect(0, ZONE_CY - PATH_W / 2, MAP_W, PATH_W)
     // Main vertical path
     g.fillRect(ZONE_CX - PATH_W / 2, 0, PATH_W, MAP_H)
+    // Stone texture on paths (small stones)
+    g.fillStyle(STONE_GRAY, 0.35)
+    for (let i = 0; i < 200; i++) {
+      const px = Math.random() * MAP_W
+      const py = ZONE_CY - PATH_W / 2 + Math.random() * PATH_W
+      g.fillCircle(px, py, 2 + Math.random() * 2)
+    }
+    for (let i = 0; i < 200; i++) {
+      const px = ZONE_CX - PATH_W / 2 + Math.random() * PATH_W
+      const py = Math.random() * MAP_H
+      g.fillCircle(px, py, 2 + Math.random() * 2)
+    }
     // Center plaza
     g.fillStyle(DIRT_DARK)
     g.fillCircle(ZONE_CX, ZONE_CY, 50)
@@ -363,6 +396,31 @@ export class MapRenderer {
     drawFence(g, PASTURE_X2, PASTURE_Y1, PASTURE_X2, PASTURE_Y2)  // right
     drawFence(g, PASTURE_X2, PASTURE_Y2, PASTURE_X1, PASTURE_Y2)  // bottom
     drawFence(g, PASTURE_X1, PASTURE_Y2, PASTURE_X1, PASTURE_Y1)  // left
+    // Well
+    g.fillStyle(STONE_GRAY)
+    g.fillCircle(300, 280, 14)
+    g.fillStyle(0x555555)
+    g.fillCircle(300, 280, 10)
+    g.fillStyle(POND_BLUE, 0.7)
+    g.fillCircle(300, 280, 7)
+    // Well roof
+    g.fillStyle(WOOD)
+    g.fillTriangle(285, 266, 315, 266, 300, 250)
+    // Barrels
+    g.fillStyle(WOOD_DARK)
+    g.fillCircle(150, 260, 10)
+    g.fillStyle(WOOD)
+    g.fillRect(143, 252, 14, 16)
+    g.fillStyle(WOOD_DARK)
+    g.fillRect(143, 256, 14, 2)
+    g.fillRect(143, 262, 14, 2)
+    g.fillStyle(WOOD_DARK)
+    g.fillCircle(175, 255, 9)
+    g.fillStyle(WOOD)
+    g.fillRect(168, 248, 14, 14)
+    g.fillStyle(WOOD_DARK)
+    g.fillRect(168, 252, 14, 2)
+    g.fillRect(168, 258, 14, 2)
 
     // ── Orchard ──
     drawGreenhouse(g, GH_X, GH_Y)
@@ -420,9 +478,9 @@ export class MapRenderer {
     g.fillCircle(320, 400, 8)
 
     // ── Orchard trees ──
-    drawTree(g, 780, 100, 55)
-    drawTree(g, 950, 80, 60)
-    drawTree(g, 1080, 120, 50)
+    drawPine(g, 780, 100, 55)
+    drawPine(g, 950, 80, 60)
+    drawPine(g, 1080, 120, 50)
     drawTree(g, 1050, 280, 55)
     drawTree(g, 680, 160, 50)
     // Crop rows
