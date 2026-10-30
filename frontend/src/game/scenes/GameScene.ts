@@ -453,9 +453,13 @@ export class GameScene extends Phaser.Scene {
       const mapW = MAP_COLS * TILE
       const mapH = MAP_ROWS * TILE
 
-      selected.forEach((alimento) => {
-        const x = Phaser.Math.Between(80, mapW - 80)
-        const y = Phaser.Math.Between(80, mapH - 80)
+      // Poisson-disc distribution: avoid food clustering
+      const positions = this.poissonDisc(mapW, mapH, 110, selected.length)
+
+      selected.forEach((alimento, i) => {
+        const pos = positions[i] ?? { x: Phaser.Math.Between(80, mapW - 80), y: Phaser.Math.Between(80, mapH - 80) }
+        const x = pos.x
+        const y = pos.y
         const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
         const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
@@ -465,11 +469,13 @@ export class GameScene extends Phaser.Scene {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
+        const container = this.add.container(x, y, [glow, body, label]).setDepth(5).setAlpha(0)
 
         this.tweens.add({ targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.08, duration: 1100, yoyo: true, repeat: -1 })
         this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 700 })
         this.tweens.add({ targets: body, angle: { from: -6, to: 6 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // Progressive appearance
+        this.tweens.add({ targets: container, alpha: 1, duration: 400, delay: i * 180 })
 
         // Wander behaviour: small random velocity, changes direction every ~2s
         const ang = Math.random() * Math.PI * 2
@@ -863,8 +869,15 @@ export class GameScene extends Phaser.Scene {
       const alimento = Phaser.Utils.Array.GetRandom(alimentos)
       const mapW = MAP_COLS * TILE
       const mapH = MAP_ROWS * TILE
-      const x = Phaser.Math.Between(80, mapW - 80)
-      const y = Phaser.Math.Between(80, mapH - 80)
+      // Pick a spot reasonably far from existing foods
+      let x = Phaser.Math.Between(80, mapW - 80)
+      let y = Phaser.Math.Between(80, mapH - 80)
+      for (let tries = 0; tries < 12; tries++) {
+        const cx = Phaser.Math.Between(80, mapW - 80)
+        const cy = Phaser.Math.Between(80, mapH - 80)
+        const tooClose = this.foods.some((f) => !f.collected && Phaser.Math.Distance.Between(cx, cy, f.container.x, f.container.y) < 90)
+        if (!tooClose) { x = cx; y = cy; break }
+      }
       const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
       const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
@@ -1093,6 +1106,21 @@ export class GameScene extends Phaser.Scene {
         this.collectFood(food)
       }
     })
+  }
+
+  /** Poisson-disc-ish distribution: returns `count` points in [pad..w-pad]x[pad..h-pad] at least `minDist` apart. */
+  private poissonDisc(w: number, h: number, minDist: number, count: number): { x: number; y: number }[] {
+    const pad = 80
+    const result: { x: number; y: number }[] = []
+    let attempts = 0
+    while (result.length < count && attempts < count * 60) {
+      attempts++
+      const x = Phaser.Math.Between(pad, w - pad)
+      const y = Phaser.Math.Between(pad, h - pad)
+      const ok = result.every((p) => Phaser.Math.Distance.Between(x, y, p.x, p.y) >= minDist)
+      if (ok) result.push({ x, y })
+    }
+    return result
   }
 
   shutdown() {
