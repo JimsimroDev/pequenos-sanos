@@ -40,6 +40,14 @@ interface OtherPlayer {
   pony: PonyKey
   lastDir: Facing
   idleTimer?: Phaser.Time.TimerEvent
+  // Network interpolation state
+  targetX: number
+  targetY: number
+  lastX: number
+  lastY: number
+  velX: number
+  velY: number
+  lastUpdate: number
 }
 
 interface SceneData {
@@ -175,7 +183,9 @@ export class GameScene extends Phaser.Scene {
     this.player = this.add.container(cx, cy, [
       this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
     ]).setDepth(5)
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
+    // Camera feel: deadzone + smoother lerp + dynamic lookahead (updated in update())
+    this.cameras.main.setDeadzone(90, 70)
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
   }
 
   private createControls() {
@@ -598,9 +608,25 @@ export class GameScene extends Phaser.Scene {
 
   private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string; avatarCodigo?: string }) {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
+    const now = Date.now()
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
-      // Animate based on the movement delta before tweening to the new position
+      // Dead reckoning: estimate velocity from the delta since last update
+      const dtMs = Math.max(now - op.lastUpdate, 16)
+      const dtSec = dtMs / 1000
+      const vx = (av.x - op.lastX) / dtSec
+      const vy = (av.y - op.lastY) / dtSec
+      const vlen = Math.hypot(vx, vy)
+      const maxV = PLAYER_SPEED * 1.5
+      op.velX = vlen > maxV ? (vx / vlen) * maxV : vx
+      op.velY = vlen > maxV ? (vy / vlen) * maxV : vy
+      op.targetX = av.x
+      op.targetY = av.y
+      op.lastX = av.x
+      op.lastY = av.y
+      op.lastUpdate = now
+
+      // Animate based on the movement delta
       const dx = av.x - op.container.x
       const dy = av.y - op.container.y
       if (Math.abs(dx) + Math.abs(dy) > 2) {
@@ -614,7 +640,6 @@ export class GameScene extends Phaser.Scene {
           setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
         })
       }
-      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
       // Refresh avatar identity (pony or color) if it changed
       const pony = normalizePonyKey(av.avatarCodigo)
       if (pony !== op.pony) {
@@ -632,6 +657,7 @@ export class GameScene extends Phaser.Scene {
       const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, {
         container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
+        targetX: av.x, targetY: av.y, lastX: av.x, lastY: av.y, velX: 0, velY: 0, lastUpdate: now,
       })
     }
   }
@@ -1037,6 +1063,31 @@ export class GameScene extends Phaser.Scene {
     if (Math.abs(newY - beforeY) < 0.5 && Math.abs(this.velY) > 0) this.velY = 0
 
     this.player.setPosition(newX, newY)
+
+    // Camera lookahead: offset in the direction of travel
+    const vlen = Math.hypot(this.velX, this.velY)
+    const targetOx = vlen > 5 ? (this.velX / vlen) * 70 : 0
+    const targetOy = vlen > 5 ? (this.velY / vlen) * 50 : 0
+    this.camOffsetX += (targetOx - this.camOffsetX) * 0.08
+    this.camOffsetY += (targetOy - this.camOffsetY) * 0.08
+    this.cameras.main.setFollowOffset(-this.camOffsetX, -this.camOffsetY)
+
+    // Interpolate remote players (dead reckoning + exponential lerp)
+    const nowMs = Date.now()
+    this.otherPlayers.forEach((op) => {
+      const dt = Math.min((nowMs - op.lastUpdate) / 1000, 0.5)
+      const estX = op.targetX + op.velX * dt
+      const estY = op.targetY + op.velY * dt
+      const lambda = 14
+      const factor = 1 - Math.exp(-lambda * (delta / 1000))
+      op.container.x += (estX - op.container.x) * factor
+      op.container.y += (estY - op.container.y) * factor
+      // Decay velocity when no update for a while
+      if (nowMs - op.lastUpdate > 220) {
+        op.velX *= 0.9
+        op.velY *= 0.9
+      }
+    })
 
     // Step sound while moving
     if (dir !== 'idle') {
