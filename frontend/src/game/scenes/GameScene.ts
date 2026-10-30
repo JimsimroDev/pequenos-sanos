@@ -421,6 +421,11 @@ export class GameScene extends Phaser.Scene {
     const cy = H * 0.57
     const top = cy - PH / 2
 
+    // Panel shadow (depth behind the panel)
+    const panelShadow = this.add.rectangle(px + 6, cy + 6, PW, PH, 0x000000, 0.4)
+      .setScrollFactor(0).setDepth(199).setVisible(false)
+    this.infoPanelObjects.unshift(panelShadow)
+
     // Panel background — anchored to the right edge
     this.infoPanelBg = this.add.rectangle(px, cy, PW, PH, 0x0f172a, 0.95)
       .setStrokeStyle(3, 0x10b981)
