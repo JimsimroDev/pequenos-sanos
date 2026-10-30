@@ -950,6 +950,43 @@ export class GameScene extends Phaser.Scene {
     // Juice: subtle screen shake
     this.cameras.main.shake(110, 0.003)
 
+    // Reward: confetti burst (multi-color)
+    const confettiColors = [0xffd93d, 0xff6b6b, 0x60a5fa, 0x34d399, 0xf472b6, 0xa78bfa]
+    const confetti = this.add.particles(food.container.x, food.container.y, 'spark', {
+      speed: { min: 60, max: 260 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 1.0, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 700,
+      quantity: 30,
+      tint: confettiColors,
+      gravityY: 200,
+      emitting: false,
+    })
+    confetti.explode(30)
+    this.time.delayedCall(800, () => confetti.destroy())
+
+    // Reward: coins flying to the score (visual satisfaction)
+    for (let i = 0; i < Math.min(food.alimento.puntosReward, 6); i++) {
+      const coin = this.add.text(food.container.x, food.container.y, '🪙', { fontSize: '14px' })
+        .setOrigin(0.5).setDepth(150)
+      this.tweens.add({
+        targets: coin,
+        x: 26, y: 26,
+        scale: 0.6,
+        alpha: 0,
+        duration: 700 + i * 60,
+        delay: i * 40,
+        ease: 'Cubic.easeIn',
+        onComplete: () => coin.destroy(),
+      })
+    }
+
+    // Green check feedback
+    const check = this.add.text(food.container.x, food.container.y - 40, '✅', { fontSize: '24px' })
+      .setOrigin(0.5).setDepth(150).setAlpha(0)
+    this.tweens.add({ targets: check, alpha: 1, y: check.y - 20, duration: 250, yoyo: true, hold: 200, onComplete: () => check.destroy() })
+
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
