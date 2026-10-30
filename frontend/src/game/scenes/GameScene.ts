@@ -9,6 +9,7 @@ import { soundManager } from '../SoundManager'
 import { MapRenderer } from '../map/MapRenderer'
 import { MAP_OBSTACLES, MapObstacle } from '../map/MapRenderer'
 import { ensurePonyTextures, normalizePonyKey, setPonyAnim, PonyKey, Facing } from '../textures/PonyTextures'
+import { ensureFoodTextures, foodTextureKey } from '../textures/FoodTextures'
 
 const TILE = 48
 const MAP_COLS = 25
@@ -21,8 +22,13 @@ const SUPERPODER_DURATION = 30000
 
 interface FoodSprite {
   container: Phaser.GameObjects.Container
+  body: Phaser.GameObjects.Sprite
   alimento: AlimentoResponse
   collected: boolean
+  vx: number
+  vy: number
+  wanderTimer: number
+  flee: boolean
 }
 
 interface OtherPlayer {
@@ -34,6 +40,14 @@ interface OtherPlayer {
   pony: PonyKey
   lastDir: Facing
   idleTimer?: Phaser.Time.TimerEvent
+  // Network interpolation state
+  targetX: number
+  targetY: number
+  lastX: number
+  lastY: number
+  velX: number
+  velY: number
+  lastUpdate: number
 }
 
 interface SceneData {
@@ -122,6 +136,9 @@ export class GameScene extends Phaser.Scene {
 
     // Procedural pony sprites — idempotent, safe if BootScene already ran
     ensurePonyTextures(this)
+
+    // Food sprites (idempotent)
+    ensureFoodTextures(this)
 
     // Spark texture for collect particles (idempotent)
     if (!this.textures.exists('spark')) {
@@ -444,26 +461,39 @@ export class GameScene extends Phaser.Scene {
       const mapW = MAP_COLS * TILE
       const mapH = MAP_ROWS * TILE
 
-      selected.forEach((alimento) => {
-        const x = Phaser.Math.Between(80, mapW - 80)
-        const y = Phaser.Math.Between(80, mapH - 80)
-        const pwr = SUPERPODERS[alimento.categoria]
-        const colorHex = parseInt(pwr.color.replace('#', ''), 16)
+      // Poisson-disc distribution: avoid food clustering
+      const positions = this.poissonDisc(mapW, mapH, 110, selected.length)
 
-        const glow = this.add.circle(0, 0, 32, colorHex, 0.25)
-        const body = this.add.circle(0, 0, 22, colorHex)
-        body.setStrokeStyle(2, 0xffffff)
-        const emoji = this.add.text(0, -2, this.getFoodEmoji(alimento.categoria), { fontSize: '20px' }).setOrigin(0.5)
+      selected.forEach((alimento, i) => {
+        const pos = positions[i] ?? { x: Phaser.Math.Between(80, mapW - 80), y: Phaser.Math.Between(80, mapH - 80) }
+        const x = pos.x
+        const y = pos.y
+        const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
+        const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
+
+        const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
+        const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
         const label = this.add.text(0, 30, alimento.nombre, {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
+        const container = this.add.container(x, y, [glow, body, label]).setDepth(5).setAlpha(0)
 
-        this.tweens.add({ targets: glow, scaleX: 1.3, scaleY: 1.3, alpha: 0.1, duration: 1000, yoyo: true, repeat: -1 })
-        this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 600 })
+        this.tweens.add({ targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.08, duration: 1100, yoyo: true, repeat: -1 })
+        this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 700 })
+        this.tweens.add({ targets: body, angle: { from: -6, to: 6 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // Progressive appearance
+        this.tweens.add({ targets: container, alpha: 1, duration: 400, delay: i * 180 })
 
-        this.foods.push({ container, alimento, collected: false })
+        // Wander behaviour: small random velocity, changes direction every ~2s
+        const ang = Math.random() * Math.PI * 2
+        const spd = 12 + Math.random() * 18
+        this.foods.push({
+          container, body, alimento, collected: false,
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          wanderTimer: 1500 + Math.random() * 1500,
+          flee: alimento.categoria === 'FRUTA',
+        })
       })
     } catch (e) {
       console.error('Error al cargar alimentos:', e)
@@ -576,9 +606,25 @@ export class GameScene extends Phaser.Scene {
 
   private upsertOtherPlayer(av: { perfilId: number; nombre: string; x: number; y: number; color: string; avatarCodigo?: string }) {
     const colorHex = parseInt((av.color || '#3b82f6').replace('#', ''), 16)
+    const now = Date.now()
     if (this.otherPlayers.has(av.perfilId)) {
       const op = this.otherPlayers.get(av.perfilId)!
-      // Animate based on the movement delta before tweening to the new position
+      // Dead reckoning: estimate velocity from the delta since last update
+      const dtMs = Math.max(now - op.lastUpdate, 16)
+      const dtSec = dtMs / 1000
+      const vx = (av.x - op.lastX) / dtSec
+      const vy = (av.y - op.lastY) / dtSec
+      const vlen = Math.hypot(vx, vy)
+      const maxV = PLAYER_SPEED * 1.5
+      op.velX = vlen > maxV ? (vx / vlen) * maxV : vx
+      op.velY = vlen > maxV ? (vy / vlen) * maxV : vy
+      op.targetX = av.x
+      op.targetY = av.y
+      op.lastX = av.x
+      op.lastY = av.y
+      op.lastUpdate = now
+
+      // Animate based on the movement delta
       const dx = av.x - op.container.x
       const dy = av.y - op.container.y
       if (Math.abs(dx) + Math.abs(dy) > 2) {
@@ -592,7 +638,6 @@ export class GameScene extends Phaser.Scene {
           setPonyAnim(op.body, op.detail, op.pony, op.lastDir, false)
         })
       }
-      this.tweens.add({ targets: op.container, x: av.x, y: av.y, duration: 100 })
       // Refresh avatar identity (pony or color) if it changed
       const pony = normalizePonyKey(av.avatarCodigo)
       if (pony !== op.pony) {
@@ -610,6 +655,7 @@ export class GameScene extends Phaser.Scene {
       const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, {
         container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
+        targetX: av.x, targetY: av.y, lastX: av.x, lastY: av.y, velX: 0, velY: 0, lastUpdate: now,
       })
     }
   }
@@ -847,24 +893,38 @@ export class GameScene extends Phaser.Scene {
       const alimento = Phaser.Utils.Array.GetRandom(alimentos)
       const mapW = MAP_COLS * TILE
       const mapH = MAP_ROWS * TILE
-      const x = Phaser.Math.Between(80, mapW - 80)
-      const y = Phaser.Math.Between(80, mapH - 80)
+      // Pick a spot reasonably far from existing foods
+      let x = Phaser.Math.Between(80, mapW - 80)
+      let y = Phaser.Math.Between(80, mapH - 80)
+      for (let tries = 0; tries < 12; tries++) {
+        const cx = Phaser.Math.Between(80, mapW - 80)
+        const cy = Phaser.Math.Between(80, mapH - 80)
+        const tooClose = this.foods.some((f) => !f.collected && Phaser.Math.Distance.Between(cx, cy, f.container.x, f.container.y) < 90)
+        if (!tooClose) { x = cx; y = cy; break }
+      }
       const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
-      const colorHex = parseInt(pwr.color.replace('#', ''), 16)
+      const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
-      const glow = this.add.circle(0, 0, 32, colorHex, 0.25)
-      const body = this.add.circle(0, 0, 22, colorHex)
-      body.setStrokeStyle(2, 0xffffff)
-      const emoji = this.add.text(0, -2, this.getFoodEmoji(alimento.categoria), { fontSize: '20px' }).setOrigin(0.5)
+      const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
+      const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
       const label = this.add.text(0, 30, alimento.nombre, {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, emoji, label]).setDepth(5)
+      const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
-      this.tweens.add({ targets: container, y: y - 8, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-      this.foods.push({ container, alimento, collected: false })
+      this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({ targets: body, angle: { from: -6, to: 6 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+      const ang = Math.random() * Math.PI * 2
+      const spd = 12 + Math.random() * 18
+      this.foods.push({
+        container, body, alimento, collected: false,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        wanderTimer: 1500 + Math.random() * 1500,
+        flee: alimento.categoria === 'FRUTA',
+      })
     } catch { /* ignore */ }
   }
 
@@ -1002,6 +1062,23 @@ export class GameScene extends Phaser.Scene {
 
     this.player.setPosition(newX, newY)
 
+    // Interpolate remote players (dead reckoning + exponential lerp)
+    const nowMs = Date.now()
+    this.otherPlayers.forEach((op) => {
+      const dt = Math.min((nowMs - op.lastUpdate) / 1000, 0.5)
+      const estX = op.targetX + op.velX * dt
+      const estY = op.targetY + op.velY * dt
+      const lambda = 14
+      const factor = 1 - Math.exp(-lambda * (delta / 1000))
+      op.container.x += (estX - op.container.x) * factor
+      op.container.y += (estY - op.container.y) * factor
+      // Decay velocity when no update for a while
+      if (nowMs - op.lastUpdate > 220) {
+        op.velX *= 0.9
+        op.velY *= 0.9
+      }
+    })
+
     // Step sound while moving
     if (dir !== 'idle') {
       const now = Date.now()
@@ -1025,6 +1102,39 @@ export class GameScene extends Phaser.Scene {
       gameSocket.sendMove(this.sceneData.perfilId, this.sceneData.nombrePerfil, newX, newY, dir)
     }
 
+    // Move foods (wander + flee from player)
+    const mapW = MAP_COLS * TILE
+    const mapH = MAP_ROWS * TILE
+    this.foods.forEach((food) => {
+      if (food.collected) return
+      // flee if player is close and food is a fruit
+      if (food.flee) {
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y)
+        if (d < 120 && d > 0) {
+          const fx = (food.container.x - this.player.x) / d
+          const fy = (food.container.y - this.player.y) / d
+          food.vx = fx * 60
+          food.vy = fy * 60
+        }
+      }
+      // wander timer
+      food.wanderTimer -= delta
+      if (food.wanderTimer <= 0) {
+        food.wanderTimer = 1500 + Math.random() * 1500
+        if (!food.flee || Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y) > 120) {
+          const ang = Math.random() * Math.PI * 2
+          const spd = 12 + Math.random() * 18
+          food.vx = Math.cos(ang) * spd
+          food.vy = Math.sin(ang) * spd
+        }
+      }
+      // integrate
+      food.container.x = Phaser.Math.Clamp(food.container.x + food.vx * (delta / 1000), 60, mapW - 60)
+      food.container.y = Phaser.Math.Clamp(food.container.y + food.vy * (delta / 1000), 60, mapH - 60)
+      if (food.container.x <= 60 || food.container.x >= mapW - 60) food.vx *= -1
+      if (food.container.y <= 60 || food.container.y >= mapH - 60) food.vy *= -1
+    })
+
     // Check food collisions
     const COLLECT_RADIUS = 40
     this.foods.forEach((food) => {
@@ -1037,6 +1147,21 @@ export class GameScene extends Phaser.Scene {
         this.collectFood(food)
       }
     })
+  }
+
+  /** Poisson-disc-ish distribution: returns `count` points in [pad..w-pad]x[pad..h-pad] at least `minDist` apart. */
+  private poissonDisc(w: number, h: number, minDist: number, count: number): { x: number; y: number }[] {
+    const pad = 80
+    const result: { x: number; y: number }[] = []
+    let attempts = 0
+    while (result.length < count && attempts < count * 60) {
+      attempts++
+      const x = Phaser.Math.Between(pad, w - pad)
+      const y = Phaser.Math.Between(pad, h - pad)
+      const ok = result.every((p) => Phaser.Math.Distance.Between(x, y, p.x, p.y) >= minDist)
+      if (ok) result.push({ x, y })
+    }
+    return result
   }
 
   shutdown() {
