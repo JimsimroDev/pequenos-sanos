@@ -182,13 +182,16 @@ export class GameScene extends Phaser.Scene {
     this.playerBodySprite = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
     this.playerDetailSprite = this.add.sprite(0, -4, `pony-detail-${this.playerPony}-down-0`)
 
+    // Soft shadow under the player
+    const playerShadow = this.add.ellipse(0, 22, 34, 10, 0x000000, 0.28)
+
     this.playerLabel = this.add.text(0, 26, this.sceneData.nombrePerfil, {
       fontSize: '12px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
     this.player = this.add.container(cx, cy, [
-      this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
+      playerShadow, this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
     ]).setDepth(5)
     // Camera feel: deadzone + smoother lerp + dynamic lookahead (updated in update())
     this.cameras.main.setDeadzone(90, 70)
@@ -480,13 +483,14 @@ export class GameScene extends Phaser.Scene {
         const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
         const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
+        const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.25)
         const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
         const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
         const label = this.add.text(0, 30, alimento.nombre, {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, label]).setDepth(5).setAlpha(0)
+        const container = this.add.container(x, y, [shadow, glow, body, label]).setDepth(5).setAlpha(0)
 
         this.tweens.add({ targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.08, duration: 1100, yoyo: true, repeat: -1 })
         this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 700 })
@@ -656,12 +660,13 @@ export class GameScene extends Phaser.Scene {
       op.body.setTint(colorHex)
     } else {
       const pony = normalizePonyKey(av.avatarCodigo)
+      const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.28)
       const body = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
       const detail = this.add.sprite(0, -4, `pony-detail-${pony}-down-0`)
       const nameTag = this.add.text(0, 26, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
+      const container = this.add.container(av.x, av.y, [shadow, body, detail, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, {
         container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
         targetX: av.x, targetY: av.y, lastX: av.x, lastY: av.y, velX: 0, velY: 0, lastUpdate: now,
@@ -914,13 +919,14 @@ export class GameScene extends Phaser.Scene {
       const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
       const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
+      const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.25)
       const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
       const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
       const label = this.add.text(0, 30, alimento.nombre, {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
+      const container = this.add.container(x, y, [shadow, glow, body, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
       this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
