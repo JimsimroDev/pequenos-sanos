@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import NewProfilePage from './pages/NewProfilePage'
 import GameWrapper from './pages/GameWrapper'
+import GameWrapper3D from './pages/GameWrapper3D'
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const token = useAuthStore((s) => s.token)
@@ -35,6 +36,10 @@ export default function App() {
         <Route
           path="/game/:perfilId"
           element={<RequireAuth><GameWrapper /></RequireAuth>}
+        />
+        <Route
+          path="/game3d/:perfilId"
+          element={<RequireAuth><GameWrapper3D /></RequireAuth>}
         />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
