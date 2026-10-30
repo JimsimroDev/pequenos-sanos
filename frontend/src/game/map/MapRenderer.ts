@@ -76,32 +76,66 @@ const BBQ_X = 1050, BBQ_Y = 830
 // ── Helpers ──
 
 function drawTree(g: Phaser.GameObjects.Graphics, x: number, y: number, size: number): void {
-  // Trunk
+  // Soft shadow on the ground
+  g.fillStyle(0x000000, 0.18)
+  g.fillEllipse(x, y + 4, size * 0.95, size * 0.32)
+  // Trunk with bark shading
   g.fillStyle(TRUNK)
-  g.fillRect(x - 3, y - size * 0.3, 6, size * 0.3)
-  // Canopy (two overlapping circles for organic look)
+  g.fillRect(x - 4, y - size * 0.35, 8, size * 0.42)
+  g.fillStyle(WOOD_DARK)
+  g.fillRect(x - 4, y - size * 0.35, 3, size * 0.42)
+  // Canopy layers (back -> front) for volume
+  g.fillStyle(CANOPY_DARK)
+  g.fillCircle(x, y - size * 0.5, size * 0.42)
   g.fillStyle(CANOPY_1)
-  g.fillCircle(x - size * 0.15, y - size * 0.5, size * 0.35)
-  g.fillCircle(x + size * 0.15, y - size * 0.45, size * 0.32)
+  g.fillCircle(x - size * 0.18, y - size * 0.55, size * 0.34)
+  g.fillCircle(x + size * 0.18, y - size * 0.5, size * 0.32)
   g.fillStyle(CANOPY_2)
-  g.fillCircle(x, y - size * 0.55, size * 0.3)
+  g.fillCircle(x, y - size * 0.6, size * 0.28)
+  g.fillStyle(CANOPY_3)
+  g.fillCircle(x - size * 0.08, y - size * 0.62, size * 0.18)
+  g.fillStyle(0x5fd05f, 0.5)
+  g.fillCircle(x + size * 0.12, y - size * 0.58, size * 0.12)
 }
 
 function drawBarn(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
   const hw = BARN_W / 2, hh = BARN_H / 2
+  // Shadow
+  g.fillStyle(0x000000, 0.22)
+  g.fillEllipse(x + 10, y + hh + 8, BARN_W + 24, 18)
   // Main body
   g.fillStyle(BARN_RED)
   g.fillRect(x - hw, y - hh, BARN_W, BARN_H)
+  // Wall texture (horizontal planks)
+  g.lineStyle(1, 0xaa2222, 0.35)
+  for (let i = 1; i < 4; i++) {
+    g.lineBetween(x - hw, y - hh + i * (BARN_H / 4), x + hw, y - hh + i * (BARN_H / 4))
+  }
   // Roof triangle
   g.fillStyle(BARN_ROOF)
   g.fillTriangle(x - hw - 10, y - hh, x + hw + 10, y - hh, x, y - hh - 50)
+  g.fillStyle(0x6b3410, 0.5)
+  g.fillTriangle(x - hw - 10, y - hh, x, y - hh, x, y - hh - 25)
   // Door
   g.fillStyle(BARN_DOOR)
   g.fillRect(x - 18, y + 6, 36, hh - 6)
+  g.fillStyle(0x3a1a00)
+  g.fillRect(x - 18, y + 6, 36, 4)
+  g.fillStyle(0xffd93d)
+  g.fillRect(x - 18, y + 6, 6, 6)
+  // Window
+  g.fillStyle(0xffd93d, 0.85)
+  g.fillRect(x + 30, y - 22, 24, 18)
+  g.fillStyle(0x8b5e3c)
+  g.fillRect(x + 41, y - 22, 2, 18)
+  g.fillRect(x + 30, y - 13, 24, 2)
 }
 
 function drawGreenhouse(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
   const hw = GH_W / 2, hh = GH_H / 2
+  // Shadow
+  g.fillStyle(0x000000, 0.18)
+  g.fillEllipse(x + 6, y + hh + 6, GH_W + 16, 14)
   // Glass body
   g.fillStyle(GREENHOUSE)
   g.fillRect(x - hw, y - hh, GH_W, GH_H)
@@ -119,6 +153,9 @@ function drawGreenhouse(g: Phaser.GameObjects.Graphics, x: number, y: number): v
 }
 
 function drawStall(g: Phaser.GameObjects.Graphics, x: number, y: number, awning: number): void {
+  // Shadow
+  g.fillStyle(0x000000, 0.18)
+  g.fillEllipse(x, y + 30, 84, 16)
   // Posts
   g.fillStyle(POST)
   g.fillRect(x - 35, y - 10, 6, 50)
@@ -180,18 +217,31 @@ function drawFence(
 }
 
 function drawPond(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number): void {
-  g.fillStyle(POND_BLUE)
-  g.fillCircle(x, y, r)
+  // Shadow
+  g.fillStyle(0x000000, 0.15)
+  g.fillEllipse(x + 4, y + r + 4, r * 2 + 12, 10)
+  // Stone border
+  g.fillStyle(STONE_GRAY)
+  for (let a = 0; a < 360; a += 18) {
+    const rad = a * (Math.PI / 180)
+    const sx = x + Math.cos(rad) * (r + 3)
+    const sy = y + Math.sin(rad) * (r + 3)
+    g.fillCircle(sx, sy, 4)
+  }
+  // Water gradient (deep -> shallow)
   g.fillStyle(POND_DEEP)
-  g.fillCircle(x - r * 0.2, y - r * 0.15, r * 0.55)
-  g.fillCircle(x + r * 0.15, y + r * 0.12, r * 0.4)
+  g.fillCircle(x, y, r)
+  g.fillStyle(POND_BLUE)
+  g.fillCircle(x - r * 0.15, y - r * 0.1, r * 0.78)
+  g.fillStyle(FOUNTAIN)
+  g.fillCircle(x - r * 0.25, y - r * 0.2, r * 0.45)
   // Edge grass
   g.fillStyle(GRASS_DARK)
   for (let a = 0; a < 360; a += 30) {
     const rad = a * (Math.PI / 180)
-    const ex = x + Math.cos(rad) * (r + 4)
-    const ey = y + Math.sin(rad) * (r + 4)
-    g.fillCircle(ex, ey, 5)
+    const ex = x + Math.cos(rad) * (r + 7)
+    const ey = y + Math.sin(rad) * (r + 7)
+    g.fillCircle(ex, ey, 4)
   }
 }
 
@@ -229,18 +279,23 @@ export class MapRenderer {
     g.fillStyle(GRASS_BASE)
     g.fillRect(0, 0, MAP_W, MAP_H)
     // Alternating grass texture blocks (48×48 grid)
-    // Slightly different greens for visual variety
     for (let r = 0; r < 20; r++) {
       for (let c = 0; c < 25; c++) {
         const shade = (r + c) % 3
         if (shade === 0) {
-          g.fillStyle(GRASS_LIGHT, 0.5)
+          g.fillStyle(GRASS_LIGHT, 0.45)
           g.fillRect(c * 48, r * 48, 46, 46)
         } else if (shade === 1) {
-          g.fillStyle(GRASS_MED, 0.3)
+          g.fillStyle(GRASS_MED, 0.25)
           g.fillRect(c * 48, r * 48, 46, 46)
         }
       }
+    }
+    // Dirt patches for ground variety
+    g.fillStyle(DIRT_DARK, 0.18)
+    const patches = [[200, 150, 60], [500, 300, 50], [850, 200, 70], [300, 700, 55], [900, 600, 65], [600, 450, 45]]
+    for (const [px, py, pr] of patches) {
+      g.fillCircle(px, py, pr)
     }
   }
 
