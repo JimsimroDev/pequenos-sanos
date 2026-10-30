@@ -89,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   private powerTimer: Phaser.Time.TimerEvent | null = null
   private powerTrail: Phaser.GameObjects.Particles.ParticleEmitter | null = null
   private powerGlow: Phaser.GameObjects.Arc | null = null
+  private dayNightOverlay: Phaser.GameObjects.Rectangle | null = null
   private powerOverlay!: Phaser.GameObjects.Rectangle
   private powerText!: Phaser.GameObjects.Text
   // Info panel (right-side drawer) — replaces the old centered modal
@@ -156,6 +157,11 @@ export class GameScene extends Phaser.Scene {
 
     MapRenderer.draw(this)
     MapRenderer.animate(this)
+
+    // Day/night overlay (tint based on session time)
+    this.dayNightOverlay = this.add.rectangle(0, 0, MAP_COLS * TILE, MAP_ROWS * TILE, 0x000000, 0)
+      .setOrigin(0, 0).setDepth(50).setScrollFactor(1)
+
     this.createPlayer()
     this.createControls()
     this.createHUD()
