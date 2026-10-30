@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { Player } from './Player'
+import { PonyBillboard } from './PonyBillboard'
 import { FoodItem } from './Food'
 import { Sparkles } from '@react-three/drei'
 import { Terrain } from './Terrain'
@@ -191,9 +191,9 @@ export function GameScene3D({ color, name, onCollect }: GameScene3DProps) {
         )
       ))}
 
-      {/* Player */}
+      {/* Player (2D billboard in 3D space) */}
       <group ref={playerGroupRef} position={[0, 0, 0]}>
-        <Player color={color} name={name} />
+        <PonyBillboard color={color} pony="TWILIGHT" position={[0, 0.75, 0]} scale={1.2} />
       </group>
 
       {/* Score display (HTML overlay) */}
