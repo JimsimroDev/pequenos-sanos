@@ -129,6 +129,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.sessionStart = Date.now()
     const mapW = MAP_COLS * TILE
     const mapH = MAP_ROWS * TILE
     this.cameras.main.setBounds(0, 0, mapW, mapH)
@@ -175,13 +176,16 @@ export class GameScene extends Phaser.Scene {
     this.playerBodySprite = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
     this.playerDetailSprite = this.add.sprite(0, -4, `pony-detail-${this.playerPony}-down-0`)
 
+    // Soft shadow under the player
+    const playerShadow = this.add.ellipse(0, 22, 34, 10, 0x000000, 0.28)
+
     this.playerLabel = this.add.text(0, 26, this.sceneData.nombrePerfil, {
       fontSize: '12px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5)
 
     this.player = this.add.container(cx, cy, [
-      this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
+      playerShadow, this.playerBodySprite, this.playerDetailSprite, this.playerLabel,
     ]).setDepth(5)
     // Camera feel: deadzone + smoother lerp + dynamic lookahead (updated in update())
     this.cameras.main.setDeadzone(90, 70)
@@ -222,6 +226,10 @@ export class GameScene extends Phaser.Scene {
     this.scoreText = this.add.text(16, 16, '🪙 0', {
       fontSize: '20px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#065f46', strokeThickness: 4,
+    }).setScrollFactor(0).setDepth(100)
+    this.comboText = this.add.text(16, 44, '', {
+      fontSize: '14px', color: '#fbbf24', fontFamily: 'Arial', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
     }).setScrollFactor(0).setDepth(100)
   }
 
@@ -473,13 +481,14 @@ export class GameScene extends Phaser.Scene {
         const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
         const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
+        const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.25)
         const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
         const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
         const label = this.add.text(0, 30, alimento.nombre, {
           fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5)
 
-        const container = this.add.container(x, y, [glow, body, label]).setDepth(5).setAlpha(0)
+        const container = this.add.container(x, y, [shadow, glow, body, label]).setDepth(5).setAlpha(0)
 
         this.tweens.add({ targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.08, duration: 1100, yoyo: true, repeat: -1 })
         this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: Math.random() * 700 })
@@ -489,7 +498,7 @@ export class GameScene extends Phaser.Scene {
 
         // Wander behaviour: small random velocity, changes direction every ~2s
         const ang = Math.random() * Math.PI * 2
-        const spd = 12 + Math.random() * 18
+        const spd = (12 + Math.random() * 18) * this.getDifficulty()
         this.foods.push({
           container, body, alimento, collected: false,
           vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
@@ -649,12 +658,13 @@ export class GameScene extends Phaser.Scene {
       op.body.setTint(colorHex)
     } else {
       const pony = normalizePonyKey(av.avatarCodigo)
+      const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.28)
       const body = this.add.sprite(0, -4, 'pony-body-down-0').setTint(colorHex)
       const detail = this.add.sprite(0, -4, `pony-detail-${pony}-down-0`)
       const nameTag = this.add.text(0, 26, av.nombre, {
         fontSize: '11px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
-      const container = this.add.container(av.x, av.y, [body, detail, nameTag]).setDepth(5)
+      const container = this.add.container(av.x, av.y, [shadow, body, detail, nameTag]).setDepth(5)
       this.otherPlayers.set(av.perfilId, {
         container, nameTag, perfilId: av.perfilId, body, detail, pony, lastDir: 'down',
         targetX: av.x, targetY: av.y, lastX: av.x, lastY: av.y, velX: 0, velY: 0, lastUpdate: now,
@@ -863,10 +873,22 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: food.container, y: food.container.y - 60, alpha: 0, duration: 500,
       onComplete: () => food.container.destroy() })
 
-    // Score
-    this.score += food.alimento.puntosReward
+    // Combo: consecutive collects within 4s multiply the reward
+    const now = Date.now()
+    if (now - this.lastCollectTime < 4000 && this.lastCollectTime > 0) {
+      this.combo = Math.min(this.combo + 1, 5)
+    } else {
+      this.combo = 1
+    }
+    this.lastCollectTime = now
+    const mult = this.combo
+
+    // Score (with combo multiplier)
+    this.score += food.alimento.puntosReward * mult
     this.scoreText.setText(`🪙 ${this.score}`)
     useGameStore.getState().setSaldo(this.score)
+    this.comboText.setText(mult > 1 ? `x${mult} combo!` : '')
+    this.tweens.add({ targets: this.comboText, scaleX: 1.3, scaleY: 1.3, duration: 120, yoyo: true })
 
     this.tweens.add({ targets: this.scoreText, scaleX: 1.4, scaleY: 1.4, duration: 150, yoyo: true })
 
@@ -907,13 +929,14 @@ export class GameScene extends Phaser.Scene {
       const pwr = SUPERPODERS[alimento.categoria as keyof typeof SUPERPODERS]
       const colorHex = parseInt((pwr?.color ?? '#10b981').replace('#', ''), 16)
 
+      const shadow = this.add.ellipse(0, 22, 30, 9, 0x000000, 0.25)
       const glow = this.add.circle(0, 0, 26, colorHex, 0.22)
       const body = this.add.sprite(0, 0, foodTextureKey(alimento.categoria)).setScale(1.1)
       const label = this.add.text(0, 30, alimento.nombre, {
         fontSize: '10px', color: '#ffffff', fontFamily: 'Arial', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5)
 
-      const container = this.add.container(x, y, [glow, body, label]).setDepth(5)
+      const container = this.add.container(x, y, [shadow, glow, body, label]).setDepth(5)
       container.setAlpha(0)
       this.tweens.add({ targets: container, alpha: 1, duration: 400 })
       this.tweens.add({ targets: container, y: y - 6, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -1115,8 +1138,9 @@ export class GameScene extends Phaser.Scene {
         if (d < 120 && d > 0) {
           const fx = (food.container.x - this.player.x) / d
           const fy = (food.container.y - this.player.y) / d
-          food.vx = fx * 60
-          food.vy = fy * 60
+          const fleeSpeed = 60 * this.getDifficulty()
+          food.vx = fx * fleeSpeed
+          food.vy = fy * fleeSpeed
         }
       }
       // wander timer
@@ -1125,7 +1149,7 @@ export class GameScene extends Phaser.Scene {
         food.wanderTimer = 1500 + Math.random() * 1500
         if (!food.flee || Phaser.Math.Distance.Between(this.player.x, this.player.y, food.container.x, food.container.y) > 120) {
           const ang = Math.random() * Math.PI * 2
-          const spd = 12 + Math.random() * 18
+          const spd = (12 + Math.random() * 18) * this.getDifficulty()
           food.vx = Math.cos(ang) * spd
           food.vy = Math.sin(ang) * spd
         }
@@ -1149,6 +1173,12 @@ export class GameScene extends Phaser.Scene {
         this.collectFood(food)
       }
     })
+  }
+
+  /** Difficulty scales with session time: 1.0 at start, +0.15 per minute, capped at 2.5. */
+  private getDifficulty(): number {
+    const minutes = (Date.now() - this.sessionStart) / 60000
+    return Math.min(2.5, 1 + minutes * 0.15)
   }
 
   /** Poisson-disc-ish distribution: returns `count` points in [pad..w-pad]x[pad..h-pad] at least `minDist` apart. */
